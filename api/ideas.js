@@ -44,13 +44,13 @@ async function connectDB() {
   try {
     await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
     return mongoose.connection.readyState === 1;
-  } catch (err: any) {
+  } catch (err) {
     console.error('MongoDB Atlas connection error:', err.message);
     return false;
   }
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -85,7 +85,7 @@ export default async function handler(req: any, res: any) {
           isVerified: true
         }]
       });
-    } catch (e: any) {
+    } catch (e) {
       return res.status(500).json({ success: false, error: e.message });
     }
   }
@@ -145,7 +145,7 @@ export default async function handler(req: any, res: any) {
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
       return res.status(201).json({ success: true, data: memoryItem });
-    } catch (e: any) {
+    } catch (e) {
       return res.status(500).json({ success: false, error: e.message });
     }
   }
