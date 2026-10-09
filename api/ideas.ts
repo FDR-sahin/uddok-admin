@@ -2,8 +2,11 @@ import { MongoClient } from 'mongodb';
 import initialSourcingIdeas from '../src/data/sourcingData.json';
 
 if (typeof process !== 'undefined' && process.on) {
-  process.on('unhandledRejection', (reason) => {
-    console.log('Suppressed background rejection in ideas.ts:', reason);
+  process.on('uncaughtException', (err) => {
+    console.log('Suppressed uncaughtException in ideas.ts:', err.message);
+  });
+  process.on('unhandledRejection', (reason: any) => {
+    console.log('Suppressed unhandledRejection in ideas.ts:', reason);
   });
 }
 

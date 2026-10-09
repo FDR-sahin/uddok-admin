@@ -2,8 +2,11 @@ import { MongoClient } from 'mongodb';
 import initialBlogPosts from '../src/data/blogsData.json';
 
 if (typeof process !== 'undefined' && process.on) {
-  process.on('unhandledRejection', (reason) => {
-    console.log('Suppressed background rejection in blogs.ts:', reason);
+  process.on('uncaughtException', (err) => {
+    console.log('Suppressed uncaughtException in blogs.ts:', err.message);
+  });
+  process.on('unhandledRejection', (reason: any) => {
+    console.log('Suppressed unhandledRejection in blogs.ts:', reason);
   });
 }
 
