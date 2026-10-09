@@ -4,8 +4,15 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import dns from 'dns';
 import { initialBlogPosts } from './src/data/blogsData';
 import { initialSourcingIdeas } from './src/data/sourcingData';
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Ignore DNS set errors if restricted by runtime environment
+}
 
 dotenv.config();
 
