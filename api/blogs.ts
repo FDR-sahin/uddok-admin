@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { initialBlogPosts } from '../src/data/blogsData';
 
+mongoose.set('bufferCommands', false);
+
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 const BlogSchema = new mongoose.Schema({
@@ -28,18 +30,22 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (MONGODB_URI && mongoose.connection.readyState !== 1) {
+    if (MONGODB_URI && mongoose.connection.readyState === 0) {
       try {
-        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
       } catch (e: any) {
-        console.log('Mongo connect error in blogs.ts:', e.message);
+        console.log('Mongo connect fallback in blogs.ts:', e.message);
       }
     }
 
     if (req.method === 'GET') {
       if (mongoose.connection.readyState === 1) {
-        const blogs = await BlogModel.find().sort({ _id: -1 });
-        return res.status(200).json({ success: true, count: blogs.length, data: blogs });
+        try {
+          const blogs = await BlogModel.find().sort({ _id: -1 }).lean().exec();
+          return res.status(200).json({ success: true, count: blogs.length, data: blogs });
+        } catch (dbErr: any) {
+          console.log('DB Query error fallback to static blogs:', dbErr.message);
+        }
       }
       return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
     }
@@ -59,15 +65,19 @@ export default async function handler(req: any, res: any) {
       }
 
       if (mongoose.connection.readyState === 1) {
-        const newBlog = await BlogModel.create({
-          title,
-          category,
-          excerpt,
-          content,
-          author,
-          readTime
-        });
-        return res.status(201).json({ success: true, data: newBlog });
+        try {
+          const newBlog = await BlogModel.create({
+            title,
+            category,
+            excerpt,
+            content,
+            author,
+            readTime
+          });
+          return res.status(201).json({ success: true, data: newBlog });
+        } catch (dbErr: any) {
+          console.log('DB Create error fallback:', dbErr.message);
+        }
       }
 
       const memoryBlog = {

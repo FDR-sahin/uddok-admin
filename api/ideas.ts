@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { initialSourcingIdeas } from '../src/data/sourcingData';
 
+mongoose.set('bufferCommands', false);
+
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 const BusinessIdeaSchema = new mongoose.Schema({
@@ -37,18 +39,22 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (MONGODB_URI && mongoose.connection.readyState !== 1) {
+    if (MONGODB_URI && mongoose.connection.readyState === 0) {
       try {
-        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
       } catch (e: any) {
-        console.log('Mongo connect error in ideas.ts:', e.message);
+        console.log('Mongo connect fallback in ideas.ts:', e.message);
       }
     }
 
     if (req.method === 'GET') {
       if (mongoose.connection.readyState === 1) {
-        const ideas = await IdeaModel.find().sort({ _id: -1 });
-        return res.status(200).json({ success: true, count: ideas.length, data: ideas });
+        try {
+          const ideas = await IdeaModel.find().sort({ _id: -1 }).lean().exec();
+          return res.status(200).json({ success: true, count: ideas.length, data: ideas });
+        } catch (dbErr: any) {
+          console.log('DB Query error fallback to static ideas:', dbErr.message);
+        }
       }
       return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
     }
@@ -73,21 +79,25 @@ export default async function handler(req: any, res: any) {
       }
 
       if (mongoose.connection.readyState === 1) {
-        const newIdea = await IdeaModel.create({
-          title,
-          category,
-          district,
-          exactLocation,
-          wholesalePrice: Number(wholesalePrice),
-          retailPrice: Number(retailPrice),
-          unit,
-          moq,
-          description,
-          supplierTip,
-          coordinates,
-          isVerified: true
-        });
-        return res.status(201).json({ success: true, data: newIdea });
+        try {
+          const newIdea = await IdeaModel.create({
+            title,
+            category,
+            district,
+            exactLocation,
+            wholesalePrice: Number(wholesalePrice),
+            retailPrice: Number(retailPrice),
+            unit,
+            moq,
+            description,
+            supplierTip,
+            coordinates,
+            isVerified: true
+          });
+          return res.status(201).json({ success: true, data: newIdea });
+        } catch (dbErr: any) {
+          console.log('DB Create error fallback:', dbErr.message);
+        }
       }
 
       const memoryItem = {
