@@ -1,4 +1,5 @@
-import initialBlogPosts from '../src/data/blogsData.json';
+import { MongoClient } from 'mongodb';
+import { initialBlogPosts } from '../src/data/blogsData';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
