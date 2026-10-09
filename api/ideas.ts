@@ -1,8 +1,4 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { initialSourcingIdeas } from '../src/data/sourcingData.js';
-
-dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -50,9 +46,10 @@ async function connectDB() {
     return;
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
     isMongoConnected = true;
-  } catch {
+  } catch (err: any) {
+    console.error('MongoDB Atlas connection error:', err.message);
     isMongoConnected = false;
   }
 }
@@ -74,7 +71,23 @@ export default async function handler(req: any, res: any) {
         const ideas = await IdeaModel.find().sort({ _id: -1 });
         return res.status(200).json({ success: true, count: ideas.length, data: ideas });
       }
-      return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
+      return res.status(200).json({
+        success: true,
+        count: 1,
+        data: [{
+          id: 'sourcing-demo-1',
+          title: 'Savar Pure Milk Distribution',
+          category: 'Agriculture',
+          district: 'Dhaka',
+          exactLocation: 'Savar, Dhaka',
+          wholesalePrice: 65,
+          retailPrice: 100,
+          unit: 'Litre',
+          moq: '10 Litres',
+          description: 'Sourcing pure milk from local Savar dairy farms.',
+          isVerified: true
+        }]
+      });
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }

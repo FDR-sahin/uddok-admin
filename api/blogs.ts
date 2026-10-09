@@ -1,8 +1,4 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { initialBlogPosts } from '../src/data/blogsData.js';
-
-dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -33,9 +29,10 @@ async function connectDB() {
     return;
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
     isMongoConnected = true;
-  } catch {
+  } catch (err: any) {
+    console.error('MongoDB Atlas connection error:', err.message);
     isMongoConnected = false;
   }
 }
@@ -57,7 +54,19 @@ export default async function handler(req: any, res: any) {
         const blogs = await BlogModel.find().sort({ _id: -1 });
         return res.status(200).json({ success: true, count: blogs.length, data: blogs });
       }
-      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+      return res.status(200).json({
+        success: true,
+        count: 1,
+        data: [{
+          id: 'blog-demo-1',
+          title: 'উদ্যোক্তাদের জন্য ব্যবসায় সফলতার সহজ গাইড',
+          category: 'Entrepreneurship',
+          author: 'MD. Delowar Hossen (Mithun)',
+          excerpt: 'নতুন ব্যবসায় সিদ্ধান্ত নিতে সঠিক গাইডলাইন ও পরিকল্পনা।',
+          content: 'ব্যবসা শুরু করতে প্রোডাক্ট সোর্সিং ও মার্কেটিং কিভাবে করবেন...',
+          readTime: '৫ মিনিট'
+        }]
+      });
     } catch (e: any) {
       return res.status(500).json({ success: false, error: e.message });
     }
