@@ -1,7 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/ideas", "destination": "/api/ideas.js" },
-    { "source": "/api/blogs", "destination": "/api/blogs.js" },
-    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/((?!api/.*).*)", "destination": "/index.html" }
   ]
 }
