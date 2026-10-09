@@ -1,4 +1,26 @@
 import serverless from 'serverless-http';
 import app from '../server';
 
-export default serverless(app);
+const handler = serverless(app);
+
+export default async function (req: any, res: any) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    return await handler(req, res);
+  } catch (err: any) {
+    console.error('Serverless execution error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
+  }
+}

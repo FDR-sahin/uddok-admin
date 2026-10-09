@@ -57,47 +57,39 @@ const BlogSchema = new mongoose.Schema({
   createdAt: { type: String, default: () => new Date().toLocaleDateString('bn-BD') }
 });
 
-const IdeaModel = mongoose.models.BusinessIdea || mongoose.model('BusinessIdea', BusinessIdeaSchema);
-const BlogModel = mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
+const IdeaModel: mongoose.Model<any> = mongoose.models.BusinessIdea || mongoose.model('BusinessIdea', BusinessIdeaSchema);
+const BlogModel: mongoose.Model<any> = mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
 
 // In-memory fallback if MongoDB instance is not reachable
 let isMongoConnected = false;
 let memoryIdeas = [...initialSourcingIdeas];
 let memoryBlogs = [...initialBlogPosts];
 
-let dbInitPromise: Promise<void> | null = null;
-
 export async function initDatabase() {
-  if (dbInitPromise) return dbInitPromise;
+  if (mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
+    return;
+  }
+  if (!MONGODB_URI) {
+    isMongoConnected = false;
+    return;
+  }
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 3000
+    });
+    isMongoConnected = true;
 
-  dbInitPromise = (async () => {
-    try {
-      if (!MONGODB_URI) {
-        isMongoConnected = false;
-        return;
-      }
-      if (mongoose.connection.readyState === 1) {
-        isMongoConnected = true;
-        return;
-      }
-      await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 3000
-      });
-      isMongoConnected = true;
-
-      // Seed database if empty
-      const count = await IdeaModel.countDocuments();
-      if (count === 0) {
-        await IdeaModel.insertMany(initialSourcingIdeas);
-        await BlogModel.insertMany(initialBlogPosts);
-      }
-    } catch (err: any) {
-      isMongoConnected = false;
-      console.log('MongoDB connection fallback:', err.message);
+    // Seed database if empty
+    const count = await IdeaModel.countDocuments();
+    if (count === 0) {
+      await IdeaModel.insertMany(initialSourcingIdeas as any[]);
+      await BlogModel.insertMany(initialBlogPosts as any[]);
     }
-  })();
-
-  return dbInitPromise;
+  } catch (err: any) {
+    isMongoConnected = false;
+    console.log('MongoDB connection fallback to memory:', err.message);
+  }
 }
 
 export const app = express();
@@ -108,9 +100,9 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
   next();
 });
