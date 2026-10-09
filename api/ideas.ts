@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { initialSourcingIdeas } from '../src/data/sourcingData';
+import initialSourcingIdeas from '../src/data/sourcingData.json';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 let cachedClient: MongoClient | null = null;

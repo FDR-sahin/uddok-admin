@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { initialBlogPosts } from '../src/data/blogsData';
+import initialBlogPosts from '../src/data/blogsData.json';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 let cachedClient: MongoClient | null = null;
