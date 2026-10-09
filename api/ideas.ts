@@ -1,33 +1,22 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 import { initialSourcingIdeas } from '../src/data/sourcingData';
 
-mongoose.set('bufferCommands', false);
-
 const MONGODB_URI = process.env.MONGODB_URI || '';
+let cachedClient: MongoClient | null = null;
 
-const BusinessIdeaSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  category: { type: String, required: true },
-  district: { type: String, required: true },
-  exactLocation: { type: String, required: true },
-  wholesalePrice: { type: Number, required: true },
-  retailPrice: { type: Number, required: true },
-  unit: { type: String, default: 'প্রতি পিস' },
-  moq: { type: String, default: '১০ পিস' },
-  description: { type: String, default: '' },
-  supplierTip: { type: String, default: '' },
-  coordinates: {
-    lat: { type: Number, default: 23.8583 },
-    lng: { type: Number, default: 90.2667 }
-  },
-  isVerified: { type: Boolean, default: true },
-  likes: { type: Number, default: 12 },
-  dislikes: { type: Number, default: 0 },
-  comments: [],
-  createdAt: { type: String, default: () => new Date().toLocaleDateString('bn-BD') }
-});
-
-const IdeaModel: mongoose.Model<any> = mongoose.models.BusinessIdea || mongoose.model('BusinessIdea', BusinessIdeaSchema);
+async function getDb() {
+  if (!MONGODB_URI) return null;
+  if (cachedClient) return cachedClient.db('uddokta_db');
+  try {
+    const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+    await client.connect();
+    cachedClient = client;
+    return client.db('uddokta_db');
+  } catch (err: any) {
+    console.log('MongoDB connection fallback:', err.message);
+    return null;
+  }
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -39,21 +28,17 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (MONGODB_URI && mongoose.connection.readyState === 0) {
-      try {
-        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
-      } catch (e: any) {
-        console.log('Mongo connect fallback in ideas.ts:', e.message);
-      }
-    }
+    const db = await getDb();
 
     if (req.method === 'GET') {
-      if (mongoose.connection.readyState === 1) {
+      if (db) {
         try {
-          const ideas = await IdeaModel.find().sort({ _id: -1 }).lean().exec();
-          return res.status(200).json({ success: true, count: ideas.length, data: ideas });
-        } catch (dbErr: any) {
-          console.log('DB Query error fallback to static ideas:', dbErr.message);
+          const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
+          if (ideas && ideas.length > 0) {
+            return res.status(200).json({ success: true, count: ideas.length, data: ideas });
+          }
+        } catch (e: any) {
+          console.log('MongoDB query error in ideas:', e.message);
         }
       }
       return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
@@ -78,30 +63,7 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ success: false, message: 'All required fields must be provided' });
       }
 
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const newIdea = await IdeaModel.create({
-            title,
-            category,
-            district,
-            exactLocation,
-            wholesalePrice: Number(wholesalePrice),
-            retailPrice: Number(retailPrice),
-            unit,
-            moq,
-            description,
-            supplierTip,
-            coordinates,
-            isVerified: true
-          });
-          return res.status(201).json({ success: true, data: newIdea });
-        } catch (dbErr: any) {
-          console.log('DB Create error fallback:', dbErr.message);
-        }
-      }
-
-      const memoryItem = {
-        id: `sourcing-${Date.now()}`,
+      const newIdea = {
         title,
         category,
         district,
@@ -114,12 +76,22 @@ export default async function handler(req: any, res: any) {
         supplierTip,
         coordinates,
         isVerified: true,
-        likes: 0,
+        likes: 12,
         dislikes: 0,
         comments: [],
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
-      return res.status(201).json({ success: true, data: memoryItem });
+
+      if (db) {
+        try {
+          const result = await db.collection('ideas').insertOne(newIdea);
+          return res.status(201).json({ success: true, data: { ...newIdea, _id: result.insertedId } });
+        } catch (e: any) {
+          console.log('MongoDB insert error in ideas:', e.message);
+        }
+      }
+
+      return res.status(201).json({ success: true, data: { ...newIdea, id: `sourcing-${Date.now()}` } });
     }
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });

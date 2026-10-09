@@ -1,24 +1,22 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 import { initialBlogPosts } from '../src/data/blogsData';
 
-mongoose.set('bufferCommands', false);
-
 const MONGODB_URI = process.env.MONGODB_URI || '';
+let cachedClient: MongoClient | null = null;
 
-const BlogSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  category: { type: String, required: true },
-  author: { type: String, default: 'মোঃ দেলোয়ার হোসেন (মিথুন)' },
-  authorTitle: { type: String, default: 'Founder & CEO, Regards Tech' },
-  readTime: { type: String, default: '৫ মিনিট' },
-  excerpt: { type: String, required: true },
-  content: { type: String, required: true },
-  bulletPoints: [String],
-  actionChecklist: [String],
-  createdAt: { type: String, default: () => new Date().toLocaleDateString('bn-BD') }
-});
-
-const BlogModel: mongoose.Model<any> = mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
+async function getDb() {
+  if (!MONGODB_URI) return null;
+  if (cachedClient) return cachedClient.db('uddokta_db');
+  try {
+    const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+    await client.connect();
+    cachedClient = client;
+    return client.db('uddokta_db');
+  } catch (err: any) {
+    console.log('MongoDB connection fallback:', err.message);
+    return null;
+  }
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -30,21 +28,17 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (MONGODB_URI && mongoose.connection.readyState === 0) {
-      try {
-        await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
-      } catch (e: any) {
-        console.log('Mongo connect fallback in blogs.ts:', e.message);
-      }
-    }
+    const db = await getDb();
 
     if (req.method === 'GET') {
-      if (mongoose.connection.readyState === 1) {
+      if (db) {
         try {
-          const blogs = await BlogModel.find().sort({ _id: -1 }).lean().exec();
-          return res.status(200).json({ success: true, count: blogs.length, data: blogs });
-        } catch (dbErr: any) {
-          console.log('DB Query error fallback to static blogs:', dbErr.message);
+          const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
+          if (blogs && blogs.length > 0) {
+            return res.status(200).json({ success: true, count: blogs.length, data: blogs });
+          }
+        } catch (e: any) {
+          console.log('MongoDB query error in blogs:', e.message);
         }
       }
       return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
@@ -64,24 +58,7 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ success: false, message: 'Required fields missing' });
       }
 
-      if (mongoose.connection.readyState === 1) {
-        try {
-          const newBlog = await BlogModel.create({
-            title,
-            category,
-            excerpt,
-            content,
-            author,
-            readTime
-          });
-          return res.status(201).json({ success: true, data: newBlog });
-        } catch (dbErr: any) {
-          console.log('DB Create error fallback:', dbErr.message);
-        }
-      }
-
-      const memoryBlog = {
-        id: `blog-${Date.now()}`,
+      const newBlog = {
         title,
         category,
         excerpt,
@@ -89,12 +66,19 @@ export default async function handler(req: any, res: any) {
         author,
         authorTitle: 'Founder & CEO, Regards Tech',
         readTime,
-        date: new Date().toLocaleDateString('bn-BD'),
-        bulletPoints: [],
-        actionChecklist: [],
-        tags: [category]
+        createdAt: new Date().toLocaleDateString('bn-BD')
       };
-      return res.status(201).json({ success: true, data: memoryBlog });
+
+      if (db) {
+        try {
+          const result = await db.collection('blogs').insertOne(newBlog);
+          return res.status(201).json({ success: true, data: { ...newBlog, _id: result.insertedId } });
+        } catch (e: any) {
+          console.log('MongoDB insert error in blogs:', e.message);
+        }
+      }
+
+      return res.status(201).json({ success: true, data: { ...newBlog, id: `blog-${Date.now()}` } });
     }
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
