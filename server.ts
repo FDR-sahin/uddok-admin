@@ -410,6 +410,15 @@ app.delete('/api/blogs/:id', async (req, res) => {
   }
 });
 
+// Serve static frontend assets & fallback
+app.use(express.static(path.join(dirName, 'dist')));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(dirName, 'dist', 'index.html'));
+});
+
 // Local development listener
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3001;
