@@ -2,22 +2,18 @@ import { MongoClient } from 'mongodb';
 import initialSourcingIdeas from '../src/data/sourcingData.json';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
-let cachedClient: MongoClient | null = null;
 
 async function getDb() {
   if (!MONGODB_URI) return null;
-  if (cachedClient) return cachedClient.db('uddokta_db');
   let client: MongoClient | null = null;
   try {
-    client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+    client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 1500, serverSelectionTimeoutMS: 1500 });
     await client.connect();
-    cachedClient = client;
-    return client.db('uddokta_db');
+    return { client, db: client.db('uddokta_db') };
   } catch (err: any) {
     if (client) {
       try { await client.close(); } catch (e) {}
     }
-    console.log('MongoDB connection fallback:', err.message);
     return null;
   }
 }
@@ -32,17 +28,18 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const db = await getDb();
+    const dbObj = await getDb();
 
     if (req.method === 'GET') {
-      if (db) {
+      if (dbObj) {
         try {
-          const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
+          const ideas = await dbObj.db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
+          await dbObj.client.close().catch(() => {});
           if (ideas && ideas.length > 0) {
             return res.status(200).json({ success: true, count: ideas.length, data: ideas });
           }
         } catch (e: any) {
-          console.log('MongoDB query error in ideas:', e.message);
+          if (dbObj.client) await dbObj.client.close().catch(() => {});
         }
       }
       return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
@@ -64,6 +61,7 @@ export default async function handler(req: any, res: any) {
       } = req.body || {};
 
       if (!title || !category || !district || !exactLocation || !wholesalePrice || !retailPrice) {
+        if (dbObj?.client) await dbObj.client.close().catch(() => {});
         return res.status(400).json({ success: false, message: 'All required fields must be provided' });
       }
 
@@ -86,18 +84,20 @@ export default async function handler(req: any, res: any) {
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
 
-      if (db) {
+      if (dbObj) {
         try {
-          const result = await db.collection('ideas').insertOne(newIdea);
+          const result = await dbObj.db.collection('ideas').insertOne(newIdea);
+          await dbObj.client.close().catch(() => {});
           return res.status(201).json({ success: true, data: { ...newIdea, _id: result.insertedId } });
         } catch (e: any) {
-          console.log('MongoDB insert error in ideas:', e.message);
+          if (dbObj.client) await dbObj.client.close().catch(() => {});
         }
       }
 
       return res.status(201).json({ success: true, data: { ...newIdea, id: `sourcing-${Date.now()}` } });
     }
 
+    if (dbObj?.client) await dbObj.client.close().catch(() => {});
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (err: any) {
     return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
