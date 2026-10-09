@@ -1,6 +1,12 @@
 import { MongoClient } from 'mongodb';
 import initialSourcingIdeas from '../src/data/sourcingData.json';
 
+if (typeof process !== 'undefined' && process.on) {
+  process.on('unhandledRejection', (reason) => {
+    console.log('Suppressed background rejection in ideas.ts:', reason);
+  });
+}
+
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 async function getDb() {

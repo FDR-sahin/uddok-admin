@@ -1,6 +1,12 @@
 import { MongoClient } from 'mongodb';
 import initialBlogPosts from '../src/data/blogsData.json';
 
+if (typeof process !== 'undefined' && process.on) {
+  process.on('unhandledRejection', (reason) => {
+    console.log('Suppressed background rejection in blogs.ts:', reason);
+  });
+}
+
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 async function getDb() {
