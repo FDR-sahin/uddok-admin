@@ -7,12 +7,16 @@ let cachedClient: MongoClient | null = null;
 async function getDb() {
   if (!MONGODB_URI) return null;
   if (cachedClient) return cachedClient.db('uddokta_db');
+  let client: MongoClient | null = null;
   try {
-    const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+    client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
     await client.connect();
     cachedClient = client;
     return client.db('uddokta_db');
   } catch (err: any) {
+    if (client) {
+      try { await client.close(); } catch (e) {}
+    }
     console.log('MongoDB connection fallback:', err.message);
     return null;
   }
