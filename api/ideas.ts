@@ -1,5 +1,3 @@
-import initialSourcingIdeas from '../src/data/sourcingData.json';
-
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -10,6 +8,13 @@ export default async function handler(req: any, res: any) {
   }
 
   const MONGODB_URI = process.env.MONGODB_URI;
+
+  let fallbackData: any[] = [];
+  try {
+    fallbackData = require('../src/data/sourcingData.json');
+  } catch (e) {
+    fallbackData = [];
+  }
 
   try {
     if (req.method === 'GET') {
@@ -29,7 +34,7 @@ export default async function handler(req: any, res: any) {
           console.log('MongoDB Atlas ideas fetch fallback:', err.message);
         }
       }
-      return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
+      return res.status(200).json({ success: true, count: fallbackData.length, data: fallbackData });
     }
 
     if (req.method === 'POST') {
@@ -89,6 +94,6 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (globalErr: any) {
-    return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
+    return res.status(200).json({ success: true, count: fallbackData.length, data: fallbackData });
   }
 }
