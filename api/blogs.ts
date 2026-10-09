@@ -1,7 +1,21 @@
 import { MongoClient } from 'mongodb';
-import { initialBlogPosts } from '../src/data/blogsData';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
+
+const fallbackBlogs = [
+  {
+    id: 'blog-1',
+    title: '৫,০০০ টাকার মধ্যে ব্যবসা শুরু করার পরিকল্পনা',
+    category: 'বাজেট প্ল্যানিং',
+    date: '০৮ অক্টোবর, ২০২৪',
+    readTime: '৫ মিনিট',
+    author: 'মোঃ দেলোয়ার হোসেন (মিথুন)',
+    authorTitle: 'Founder & CEO, Regards Tech',
+    excerpt: 'মাত্র ৫,০০০ টাকা দিয়ে কি ব্যবসা শুরু করা সম্ভব? সঠিক পণ্য নির্বাচন, জিরো-ইনভেন্টরি বা মাইক্রো-লট সোর্সিং ও অর্গানিক ফেসবুক মার্কেটিংয়ের মাধ্যমে কীভাবে মাত্র ৫ হাজার টাকায় যাত্রা শুরু করবেন।',
+    content: 'অনেকের ধারণা ব্যবসা করতে লাখ লাখ টাকা লাগে। কিন্তু বাস্তবে ছোট বাজেট নিয়ে শুরু করলে ভুলের ক্ষতি কম হয় এবং শেখার সুযোগ বেশি থাকে।',
+    bulletPoints: ['৫,০০০ টাকায় বড় ইনভেন্টরি নয়, টেস্ট লট নিয়ে শুরু করুন।']
+  }
+];
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,7 +45,7 @@ export default async function handler(req: any, res: any) {
           console.log('MongoDB Atlas blogs fetch fallback:', err.message);
         }
       }
-      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+      return res.status(200).json({ success: true, count: fallbackBlogs.length, data: fallbackBlogs });
     }
 
     if (req.method === 'POST') {
@@ -79,6 +93,6 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (globalErr: any) {
-    return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+    return res.status(200).json({ success: true, count: fallbackBlogs.length, data: fallbackBlogs });
   }
 }
