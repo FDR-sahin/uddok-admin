@@ -36,7 +36,11 @@ export default async function handler(req: any, res: any) {
           const blogs = await dbObj.db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
           await dbObj.client.close().catch(() => {});
           if (blogs && blogs.length > 0) {
-            return res.status(200).json({ success: true, count: blogs.length, data: blogs });
+            const cleanBlogs = blogs.map((b: any) => ({
+              ...b,
+              _id: b._id ? b._id.toString() : b.id
+            }));
+            return res.status(200).json({ success: true, count: cleanBlogs.length, data: cleanBlogs });
           }
         } catch (e: any) {
           if (dbObj.client) await dbObj.client.close().catch(() => {});
@@ -75,7 +79,7 @@ export default async function handler(req: any, res: any) {
         try {
           const result = await dbObj.db.collection('blogs').insertOne(newBlog);
           await dbObj.client.close().catch(() => {});
-          return res.status(201).json({ success: true, data: { ...newBlog, _id: result.insertedId } });
+          return res.status(201).json({ success: true, data: { ...newBlog, _id: result.insertedId.toString() } });
         } catch (e: any) {
           if (dbObj.client) await dbObj.client.close().catch(() => {});
         }
