@@ -410,14 +410,14 @@ async function startServer() {
     }
   });
 
-  // --- VITE MIDDLEWARE ---
-  if (!isProduction) {
+  // --- VITE / STATIC MIDDLEWARE ---
+  if (!isProduction && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.resolve(distPath, 'index.html'));
