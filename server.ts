@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { initialBlogPosts } from './src/data/blogsData';
@@ -8,8 +7,7 @@ import { initialSourcingIdeas } from './src/data/sourcingData';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const dirName = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'regardstech.team@gmail.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'redardstech123';
