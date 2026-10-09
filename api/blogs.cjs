@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -33,7 +33,7 @@ async function connectDB() {
   }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -114,4 +114,4 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-}
+};
