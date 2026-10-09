@@ -1,5 +1,10 @@
+import dns from 'dns';
 import { MongoClient } from 'mongodb';
 import initialBlogPosts from '../src/data/blogsData.json';
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
 
 if (typeof process !== 'undefined' && process.on) {
   process.on('uncaughtException', (err) => {
@@ -16,7 +21,7 @@ async function getDb() {
   if (!MONGODB_URI) return null;
   let client: MongoClient | null = null;
   try {
-    client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 1500, serverSelectionTimeoutMS: 1500 });
+    client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
     await client.connect();
     return { client, db: client.db('uddokta_db') };
   } catch (err: any) {
@@ -42,14 +47,14 @@ export default async function handler(req: any, res: any) {
       try {
         const dbObj = await Promise.race([
           getDb(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
         ]);
 
         if (dbObj) {
           try {
             const dbBlogs = await Promise.race([
               dbObj.db.collection('blogs').find({}).sort({ _id: -1 }).toArray(),
-              new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1500))
+              new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 2000))
             ]);
             if (dbBlogs && dbBlogs.length > 0) {
               blogsData = dbBlogs.map((b: any) => ({
