@@ -1,6 +1,4 @@
-import { BlogPost } from '../types';
-
-export const initialBlogPosts: BlogPost[] = [
+export const initialBlogPosts: any[] = [
   {
     id: 'blog-1',
     title: '৫,০০০ টাকার মধ্যে ব্যবসা শুরু করার পরিকল্পনা',

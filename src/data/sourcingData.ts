@@ -1,6 +1,4 @@
-import { SourcingIdea } from '../types';
-
-export const initialSourcingIdeas: SourcingIdea[] = [
+export const initialSourcingIdeas: any[] = [
   {
     id: 'sourcing-1',
     title: 'Savar-এ MILK পাইকারি সোর্সিং',
