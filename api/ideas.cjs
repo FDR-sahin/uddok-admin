@@ -34,18 +34,33 @@ const BusinessIdeaSchema = new mongoose.Schema({
 
 const IdeaModel = mongoose.models.BusinessIdea || mongoose.model('BusinessIdea', BusinessIdeaSchema);
 
+const memoryIdeas = [
+  {
+    id: 'sourcing-1',
+    title: 'Savar Pure Milk Wholesale',
+    category: 'Agriculture',
+    district: 'Dhaka',
+    exactLocation: 'Savar, Dhaka',
+    wholesalePrice: 65,
+    retailPrice: 100,
+    unit: 'Litre',
+    moq: '10 Litres',
+    description: 'Sourcing pure milk from local Savar dairy farms.',
+    isVerified: true
+  }
+];
+
 async function connectDB() {
   if (mongoose.connection.readyState === 1) {
     return true;
   }
-  if (!MONGODB_URI) {
+  if (!MONGODB_URI || !MONGODB_URI.startsWith('mongodb')) {
     return false;
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
     return mongoose.connection.readyState === 1;
   } catch (err) {
-    console.error('MongoDB Atlas connection error:', err.message);
     return false;
   }
 }
@@ -59,35 +74,18 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const isConnected = await connectDB();
-
   if (req.method === "GET") {
     try {
+      const isConnected = await connectDB();
       if (isConnected && mongoose.connection.readyState === 1) {
-        const ideas = await IdeaModel.find().sort({ _id: -1 });
+        const ideas = await IdeaModel.find().sort({ _id: -1 }).lean();
         return res.status(200).json({ success: true, count: ideas.length, data: ideas });
       }
-
-      return res.status(200).json({
-        success: true,
-        count: 1,
-        data: [{
-          id: 'sourcing-demo-1',
-          title: 'Savar Pure Milk Distribution',
-          category: 'Agriculture',
-          district: 'Dhaka',
-          exactLocation: 'Savar, Dhaka',
-          wholesalePrice: 65,
-          retailPrice: 100,
-          unit: 'Litre',
-          moq: '10 Litres',
-          description: 'Sourcing pure milk from local Savar dairy farms.',
-          isVerified: true
-        }]
-      });
     } catch (e) {
-      return res.status(500).json({ success: false, error: e.message });
+      console.error('Mongo query fallback:', e);
     }
+
+    return res.status(200).json({ success: true, count: memoryIdeas.length, data: memoryIdeas });
   }
 
   if (req.method === "POST") {
@@ -110,6 +108,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ success: false, message: 'All required fields must be provided' });
       }
 
+      const isConnected = await connectDB();
       if (isConnected && mongoose.connection.readyState === 1) {
         const newIdea = await IdeaModel.create({
           title,
@@ -144,6 +143,7 @@ module.exports = async function handler(req, res) {
         isVerified: true,
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
+      memoryIdeas.unshift(memoryItem);
       return res.status(201).json({ success: true, data: memoryItem });
     } catch (e) {
       return res.status(500).json({ success: false, error: e.message });

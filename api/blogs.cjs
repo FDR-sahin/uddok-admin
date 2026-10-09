@@ -17,18 +17,29 @@ const BlogSchema = new mongoose.Schema({
 
 const BlogModel = mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
 
+const memoryBlogs = [
+  {
+    id: 'blog-1',
+    title: 'উদ্যোক্তাদের জন্য ব্যবসায় সফলতার সহজ গাইড',
+    category: 'Entrepreneurship',
+    author: 'MD. Delowar Hossen (Mithun)',
+    excerpt: 'নতুন ব্যবসায় সিদ্ধান্ত নিতে সঠিক গাইডলাইন ও পরিকল্পনা।',
+    content: 'ব্যবসা শুরু করতে প্রোডাক্ট সোর্সিং ও মার্কেটিং কিভাবে করবেন...',
+    readTime: '৫ মিনিট'
+  }
+];
+
 async function connectDB() {
   if (mongoose.connection.readyState === 1) {
     return true;
   }
-  if (!MONGODB_URI) {
+  if (!MONGODB_URI || !MONGODB_URI.startsWith('mongodb')) {
     return false;
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
     return mongoose.connection.readyState === 1;
   } catch (err) {
-    console.error('MongoDB Atlas connection error:', err.message);
     return false;
   }
 }
@@ -42,31 +53,18 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const isConnected = await connectDB();
-
   if (req.method === "GET") {
     try {
+      const isConnected = await connectDB();
       if (isConnected && mongoose.connection.readyState === 1) {
-        const blogs = await BlogModel.find().sort({ _id: -1 });
+        const blogs = await BlogModel.find().sort({ _id: -1 }).lean();
         return res.status(200).json({ success: true, count: blogs.length, data: blogs });
       }
-
-      return res.status(200).json({
-        success: true,
-        count: 1,
-        data: [{
-          id: 'blog-demo-1',
-          title: 'উদ্যোক্তাদের জন্য ব্যবসায় সফলতার সহজ গাইড',
-          category: 'Entrepreneurship',
-          author: 'MD. Delowar Hossen (Mithun)',
-          excerpt: 'নতুন ব্যবসায় সিদ্ধান্ত নিতে সঠিক গাইডলাইন ও পরিকল্পনা।',
-          content: 'ব্যবসা শুরু করতে প্রোডাক্ট সোর্সিং ও মার্কেটিং কিভাবে করবেন...',
-          readTime: '৫ মিনিট'
-        }]
-      });
     } catch (e) {
-      return res.status(500).json({ success: false, error: e.message });
+      console.error('Mongo blog query fallback:', e);
     }
+
+    return res.status(200).json({ success: true, count: memoryBlogs.length, data: memoryBlogs });
   }
 
   if (req.method === "POST") {
@@ -84,6 +82,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ success: false, message: 'Required fields missing' });
       }
 
+      const isConnected = await connectDB();
       if (isConnected && mongoose.connection.readyState === 1) {
         const newBlog = await BlogModel.create({
           title,
@@ -107,6 +106,7 @@ module.exports = async function handler(req, res) {
         readTime,
         date: new Date().toLocaleDateString('bn-BD')
       };
+      memoryBlogs.unshift(memoryBlog);
       return res.status(201).json({ success: true, data: memoryBlog });
     } catch (e) {
       return res.status(500).json({ success: false, error: e.message });
