@@ -28,25 +28,35 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const dbObj = await getDb();
-
     if (req.method === 'GET') {
-      if (dbObj) {
-        try {
-          const blogs = await dbObj.db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
-          await dbObj.client.close().catch(() => {});
-          if (blogs && blogs.length > 0) {
-            const cleanBlogs = blogs.map((b: any) => ({
-              ...b,
-              _id: b._id ? b._id.toString() : b.id
-            }));
-            return res.status(200).json({ success: true, count: cleanBlogs.length, data: cleanBlogs });
+      let blogsData: any[] = initialBlogPosts;
+      try {
+        const dbObj = await Promise.race([
+          getDb(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+        ]);
+
+        if (dbObj) {
+          try {
+            const dbBlogs = await Promise.race([
+              dbObj.db.collection('blogs').find({}).sort({ _id: -1 }).toArray(),
+              new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1500))
+            ]);
+            if (dbBlogs && dbBlogs.length > 0) {
+              blogsData = dbBlogs.map((b: any) => ({
+                ...b,
+                _id: b._id ? String(b._id) : b.id
+              }));
+            }
+          } finally {
+            await dbObj.client.close().catch(() => {});
           }
-        } catch (e: any) {
-          if (dbObj.client) await dbObj.client.close().catch(() => {});
         }
+      } catch (e: any) {
+        console.log('Fallback in GET /api/blogs:', e.message);
       }
-      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+
+      return res.status(200).json({ success: true, count: blogsData.length, data: blogsData });
     }
 
     if (req.method === 'POST') {
@@ -60,7 +70,6 @@ export default async function handler(req: any, res: any) {
       } = req.body || {};
 
       if (!title || !category || !excerpt || !content) {
-        if (dbObj?.client) await dbObj.client.close().catch(() => {});
         return res.status(400).json({ success: false, message: 'Required fields missing' });
       }
 
@@ -75,20 +84,23 @@ export default async function handler(req: any, res: any) {
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
 
-      if (dbObj) {
-        try {
-          const result = await dbObj.db.collection('blogs').insertOne(newBlog);
-          await dbObj.client.close().catch(() => {});
-          return res.status(201).json({ success: true, data: { ...newBlog, _id: result.insertedId.toString() } });
-        } catch (e: any) {
-          if (dbObj.client) await dbObj.client.close().catch(() => {});
+      try {
+        const dbObj = await getDb();
+        if (dbObj) {
+          try {
+            const result = await dbObj.db.collection('blogs').insertOne(newBlog);
+            return res.status(201).json({ success: true, data: { ...newBlog, _id: String(result.insertedId) } });
+          } finally {
+            await dbObj.client.close().catch(() => {});
+          }
         }
+      } catch (e: any) {
+        console.log('Fallback in POST /api/blogs:', e.message);
       }
 
       return res.status(201).json({ success: true, data: { ...newBlog, id: `blog-${Date.now()}` } });
     }
 
-    if (dbObj?.client) await dbObj.client.close().catch(() => {});
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (err: any) {
     return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });

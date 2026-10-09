@@ -28,25 +28,35 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const dbObj = await getDb();
-
     if (req.method === 'GET') {
-      if (dbObj) {
-        try {
-          const ideas = await dbObj.db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
-          await dbObj.client.close().catch(() => {});
-          if (ideas && ideas.length > 0) {
-            const cleanIdeas = ideas.map((i: any) => ({
-              ...i,
-              _id: i._id ? i._id.toString() : i.id
-            }));
-            return res.status(200).json({ success: true, count: cleanIdeas.length, data: cleanIdeas });
+      let ideasData: any[] = initialSourcingIdeas;
+      try {
+        const dbObj = await Promise.race([
+          getDb(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+        ]);
+
+        if (dbObj) {
+          try {
+            const dbIdeas = await Promise.race([
+              dbObj.db.collection('ideas').find({}).sort({ _id: -1 }).toArray(),
+              new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1500))
+            ]);
+            if (dbIdeas && dbIdeas.length > 0) {
+              ideasData = dbIdeas.map((i: any) => ({
+                ...i,
+                _id: i._id ? String(i._id) : i.id
+              }));
+            }
+          } finally {
+            await dbObj.client.close().catch(() => {});
           }
-        } catch (e: any) {
-          if (dbObj.client) await dbObj.client.close().catch(() => {});
         }
+      } catch (e: any) {
+        console.log('Fallback in GET /api/ideas:', e.message);
       }
-      return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
+
+      return res.status(200).json({ success: true, count: ideasData.length, data: ideasData });
     }
 
     if (req.method === 'POST') {
@@ -65,7 +75,6 @@ export default async function handler(req: any, res: any) {
       } = req.body || {};
 
       if (!title || !category || !district || !exactLocation || !wholesalePrice || !retailPrice) {
-        if (dbObj?.client) await dbObj.client.close().catch(() => {});
         return res.status(400).json({ success: false, message: 'All required fields must be provided' });
       }
 
@@ -88,20 +97,23 @@ export default async function handler(req: any, res: any) {
         createdAt: new Date().toLocaleDateString('bn-BD')
       };
 
-      if (dbObj) {
-        try {
-          const result = await dbObj.db.collection('ideas').insertOne(newIdea);
-          await dbObj.client.close().catch(() => {});
-          return res.status(201).json({ success: true, data: { ...newIdea, _id: result.insertedId.toString() } });
-        } catch (e: any) {
-          if (dbObj.client) await dbObj.client.close().catch(() => {});
+      try {
+        const dbObj = await getDb();
+        if (dbObj) {
+          try {
+            const result = await dbObj.db.collection('ideas').insertOne(newIdea);
+            return res.status(201).json({ success: true, data: { ...newIdea, _id: String(result.insertedId) } });
+          } finally {
+            await dbObj.client.close().catch(() => {});
+          }
         }
+      } catch (e: any) {
+        console.log('Fallback in POST /api/ideas:', e.message);
       }
 
       return res.status(201).json({ success: true, data: { ...newIdea, id: `sourcing-${Date.now()}` } });
     }
 
-    if (dbObj?.client) await dbObj.client.close().catch(() => {});
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (err: any) {
     return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
