@@ -34,23 +34,19 @@ const BusinessIdeaSchema = new mongoose.Schema({
 
 const IdeaModel = mongoose.models.BusinessIdea || mongoose.model('BusinessIdea', BusinessIdeaSchema);
 
-let isMongoConnected = false;
-
 async function connectDB() {
   if (mongoose.connection.readyState === 1) {
-    isMongoConnected = true;
-    return;
+    return true;
   }
   if (!MONGODB_URI) {
-    isMongoConnected = false;
-    return;
+    return false;
   }
   try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-    isMongoConnected = true;
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    return mongoose.connection.readyState === 1;
   } catch (err: any) {
     console.error('MongoDB Atlas connection error:', err.message);
-    isMongoConnected = false;
+    return false;
   }
 }
 
@@ -63,14 +59,15 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  await connectDB();
+  const isConnected = await connectDB();
 
   if (req.method === "GET") {
     try {
-      if (isMongoConnected) {
+      if (isConnected && mongoose.connection.readyState === 1) {
         const ideas = await IdeaModel.find().sort({ _id: -1 });
         return res.status(200).json({ success: true, count: ideas.length, data: ideas });
       }
+
       return res.status(200).json({
         success: true,
         count: 1,
@@ -113,7 +110,7 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ success: false, message: 'All required fields must be provided' });
       }
 
-      if (isMongoConnected) {
+      if (isConnected && mongoose.connection.readyState === 1) {
         const newIdea = await IdeaModel.create({
           title,
           category,
