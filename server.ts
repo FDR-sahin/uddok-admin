@@ -3,15 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import dns from 'dns';
 import { initialBlogPosts } from './src/data/blogsData';
 import { initialSourcingIdeas } from './src/data/sourcingData';
-
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch {
-  // Ignore DNS errors if restricted by runtime environment
-}
 
 dotenv.config();
 
@@ -20,7 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'regardstech.team@gmail.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'redardstech123';
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/uddokta_db';
+const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // --- Mongoose Schemas & Models ---
 const CommentSchema = new mongoose.Schema({
@@ -81,26 +74,28 @@ export async function initDatabase() {
 
   dbInitPromise = (async () => {
     try {
+      if (!MONGODB_URI) {
+        isMongoConnected = false;
+        return;
+      }
       if (mongoose.connection.readyState === 1) {
         isMongoConnected = true;
         return;
       }
       await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000
+        serverSelectionTimeoutMS: 3000
       });
       isMongoConnected = true;
-      console.log('Successfully connected to MongoDB database!');
 
       // Seed database if empty
       const count = await IdeaModel.countDocuments();
       if (count === 0) {
         await IdeaModel.insertMany(initialSourcingIdeas);
         await BlogModel.insertMany(initialBlogPosts);
-        console.log('MongoDB initialized with default business ideas and blogs.');
       }
     } catch (err: any) {
       isMongoConnected = false;
-      console.log('MongoDB connection skipped/offline, using memory store fallback:', err.message);
+      console.log('MongoDB connection fallback:', err.message);
     }
   })();
 
@@ -124,7 +119,11 @@ app.use((req, res, next) => {
 
 // Lazy DB initialization middleware for Serverless & Local
 app.use(async (req, res, next) => {
-  await initDatabase();
+  try {
+    await initDatabase();
+  } catch (err) {
+    console.error('Database connection middleware error:', err);
+  }
   next();
 });
 
