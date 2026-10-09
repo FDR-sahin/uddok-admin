@@ -1,20 +1,7 @@
 import { MongoClient } from 'mongodb';
+import { initialBlogPosts } from '../src/data/blogsData';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
-
-const fallback = [
-  {
-    id: 'blog-1',
-    title: '৫,০০০ টাকার মধ্যে ব্যবসা শুরু করার পরিকল্পনা',
-    category: 'বাজেট প্ল্যানিং',
-    date: '০৮ অক্টোবর, ২০২৪',
-    readTime: '৫ মিনিট',
-    author: 'মোঃ দেলোয়ার হোসেন (মিথুন)',
-    authorTitle: 'Founder & CEO, Regards Tech',
-    excerpt: 'মাত্র ৫,০০০ টাকা দিয়ে কি ব্যবসা শুরু করা সম্ভব?',
-    content: 'অনেকের ধারণা ব্যবসা করতে লাখ লাখ টাকা লাগে।'
-  }
-];
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,16 +12,37 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  // Suppress unhandled background driver rejections in serverless functions
+  if (typeof process !== 'undefined' && !(process as any)._mongoListenersAdded) {
+    (process as any)._mongoListenersAdded = true;
+    process.on('unhandledRejection', (reason: any) => {
+      console.log('Suppressed background rejection:', reason?.message || reason);
+    });
+    process.on('uncaughtException', (err: any) => {
+      console.log('Suppressed background exception:', err?.message || err);
+    });
+  }
+
   try {
     if (req.method === 'GET') {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
-          await client.connect();
+          client = new MongoClient(MONGODB_URI, {
+            connectTimeoutMS: 2500,
+            serverSelectionTimeoutMS: 2500,
+            socketTimeoutMS: 2500
+          });
+
+          await Promise.race([
+            client.connect(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Connect Timeout')), 2500))
+          ]);
+
           const db = client.db('uddokta_db');
           const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
           await client.close().catch(() => {});
+
           if (blogs && blogs.length > 0) {
             const clean = blogs.map((b: any) => ({ ...b, _id: String(b._id) }));
             return res.status(200).json({ success: true, count: clean.length, data: clean });
@@ -44,7 +52,7 @@ export default async function handler(req: any, res: any) {
           console.log('MongoDB Atlas blogs fetch fallback:', err.message);
         }
       }
-      return res.status(200).json({ success: true, count: fallback.length, data: fallback });
+      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
     }
 
     if (req.method === 'POST') {
@@ -75,8 +83,17 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
-          await client.connect();
+          client = new MongoClient(MONGODB_URI, {
+            connectTimeoutMS: 2500,
+            serverSelectionTimeoutMS: 2500,
+            socketTimeoutMS: 2500
+          });
+
+          await Promise.race([
+            client.connect(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Connect Timeout')), 2500))
+          ]);
+
           const db = client.db('uddokta_db');
           const result = await db.collection('blogs').insertOne(newBlog);
           await client.close().catch(() => {});
@@ -92,6 +109,6 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (globalErr: any) {
-    return res.status(200).json({ success: true, count: fallback.length, data: fallback });
+    return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
   }
 }
