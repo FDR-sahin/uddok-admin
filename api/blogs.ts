@@ -23,10 +23,7 @@ export default async function handler(req: any, res: any) {
           const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
           await client.close().catch(() => {});
           if (blogs && blogs.length > 0) {
-            const clean = blogs.map((b: any) => ({
-              ...b,
-              _id: b._id ? b._id.toString() : undefined
-            }));
+            const clean = blogs.map((b: any) => ({ ...b, _id: String(b._id) }));
             return res.status(200).json({ success: true, count: clean.length, data: clean });
           }
         } catch (err: any) {
