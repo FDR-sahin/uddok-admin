@@ -1,34 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { initialSourcingIdeas } from '../src/data/sourcingData';
-import dns from 'dns';
-
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
-} catch (e) {}
-
-if (typeof process !== 'undefined') {
-  process.on('uncaughtException', (err) => {
-    console.log('UncaughtException suppressed:', err?.message);
-  });
-  process.on('unhandledRejection', (reason: any) => {
-    console.log('UnhandledRejection suppressed:', reason?.message || reason);
-  });
-}
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
-
-async function connectWithTimeout(uri: string, ms = 1500): Promise<MongoClient> {
-  const client = new MongoClient(uri, {
-    connectTimeoutMS: ms,
-    serverSelectionTimeoutMS: ms,
-    directConnection: false
-  });
-  const connectPromise = client.connect();
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('MongoDB Connection Timeout')), ms)
-  );
-  return Promise.race([connectPromise, timeoutPromise]);
-}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,7 +17,8 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = await connectWithTimeout(MONGODB_URI, 1500);
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          await client.connect();
           const db = client.db('uddokta_db');
           const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
           await client.close().catch(() => {});
@@ -101,7 +75,8 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = await connectWithTimeout(MONGODB_URI, 1500);
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('ideas').insertOne(newIdea);
           await client.close().catch(() => {});

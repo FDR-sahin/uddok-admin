@@ -1,34 +1,20 @@
 import { MongoClient } from 'mongodb';
-import { initialBlogPosts } from '../src/data/blogsData';
-import dns from 'dns';
-
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
-} catch (e) {}
-
-if (typeof process !== 'undefined') {
-  process.on('uncaughtException', (err) => {
-    console.log('UncaughtException suppressed:', err?.message);
-  });
-  process.on('unhandledRejection', (reason: any) => {
-    console.log('UnhandledRejection suppressed:', reason?.message || reason);
-  });
-}
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
-async function connectWithTimeout(uri: string, ms = 1500): Promise<MongoClient> {
-  const client = new MongoClient(uri, {
-    connectTimeoutMS: ms,
-    serverSelectionTimeoutMS: ms,
-    directConnection: false
-  });
-  const connectPromise = client.connect();
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('MongoDB Connection Timeout')), ms)
-  );
-  return Promise.race([connectPromise, timeoutPromise]);
-}
+const fallback = [
+  {
+    id: 'blog-1',
+    title: '৫,০০০ টাকার মধ্যে ব্যবসা শুরু করার পরিকল্পনা',
+    category: 'বাজেট প্ল্যানিং',
+    date: '০৮ অক্টোবর, ২০২৪',
+    readTime: '৫ মিনিট',
+    author: 'মোঃ দেলোয়ার হোসেন (মিথুন)',
+    authorTitle: 'Founder & CEO, Regards Tech',
+    excerpt: 'মাত্র ৫,০০০ টাকা দিয়ে কি ব্যবসা শুরু করা সম্ভব?',
+    content: 'অনেকের ধারণা ব্যবসা করতে লাখ লাখ টাকা লাগে।'
+  }
+];
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,7 +30,8 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = await connectWithTimeout(MONGODB_URI, 1500);
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          await client.connect();
           const db = client.db('uddokta_db');
           const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
           await client.close().catch(() => {});
@@ -57,7 +44,7 @@ export default async function handler(req: any, res: any) {
           console.log('MongoDB Atlas blogs fetch fallback:', err.message);
         }
       }
-      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+      return res.status(200).json({ success: true, count: fallback.length, data: fallback });
     }
 
     if (req.method === 'POST') {
@@ -88,7 +75,8 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = await connectWithTimeout(MONGODB_URI, 1500);
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('blogs').insertOne(newBlog);
           await client.close().catch(() => {});
@@ -104,6 +92,6 @@ export default async function handler(req: any, res: any) {
 
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   } catch (globalErr: any) {
-    return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+    return res.status(200).json({ success: true, count: fallback.length, data: fallback });
   }
 }
