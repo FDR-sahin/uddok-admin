@@ -62,10 +62,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [blogTitle, setBlogTitle] = useState('');
   const [blogCategory, setBlogCategory] = useState('বাজেট প্ল্যানিং');
   const [blogExcerpt, setBlogExcerpt] = useState('');
-  const [blogContent, setBlogContent] = useState('');
-  const [blogSubmitting, setBlogSubmitting] = useState(false);
-
   const [notification, setNotification] = useState('');
+  const [showGuideline, setShowGuideline] = useState(false);
+
+  const insertSyntax = (before: string, after: string = '') => {
+    setBlogContent((prev) => `${prev}\n${before}${after ? 'টেক্সট' + after : ''}`);
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -464,17 +466,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-800">
-                সম্পূর্ণ বিস্তারিত বিবরণ (Full Content) *
-              </label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="font-bold text-slate-800">
+                  সম্পূর্ণ বিস্তারিত বিবরণ (Full Content & Rich Formatting) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowGuideline(true)}
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center gap-1 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  ব্লগ রাইটিং গাইডলাইন ও শর্টকাট ম্যানুয়াল
+                </button>
+              </div>
+
+              {/* Formatting Toolbar */}
+              <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+                <button type="button" onClick={() => insertSyntax('**', '**')} className="px-2 py-1 bg-white border border-slate-200 rounded font-bold hover:bg-slate-50" title="Bold (**text**)">B (বোল্ড)</button>
+                <button type="button" onClick={() => insertSyntax('_', '_')} className="px-2 py-1 bg-white border border-slate-200 rounded italic hover:bg-slate-50" title="Italic (_text_)">I (ইটালিক)</button>
+                <button type="button" onClick={() => insertSyntax('~', '~')} className="px-2 py-1 bg-white border border-slate-200 rounded line-through hover:bg-slate-50" title="Strikethrough (~text~)">S (কাটা)</button>
+                <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                <button type="button" onClick={() => insertSyntax('# ')} className="px-2 py-1 bg-white border border-slate-200 rounded font-bold hover:bg-slate-50">H1</button>
+                <button type="button" onClick={() => insertSyntax('## ')} className="px-2 py-1 bg-white border border-slate-200 rounded font-bold hover:bg-slate-50">H2</button>
+                <button type="button" onClick={() => insertSyntax('### ')} className="px-2 py-1 bg-white border border-slate-200 rounded font-bold hover:bg-slate-50">H3</button>
+                <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                <button type="button" onClick={() => insertSyntax('- ')} className="px-2 py-1 bg-white border border-slate-200 rounded hover:bg-slate-50">• বুলেট তালিকা</button>
+                <button type="button" onClick={() => insertSyntax('১. ')} className="px-2 py-1 bg-white border border-slate-200 rounded hover:bg-slate-50">১. নম্বর তালিকা</button>
+                <button type="button" onClick={() => insertSyntax('> ')} className="px-2 py-1 bg-white border border-slate-200 rounded hover:bg-slate-50">“ কোটেশন</button>
+                <span className="h-4 w-px bg-slate-300 mx-0.5" />
+                <button type="button" onClick={() => insertSyntax('[color=#10b981]', '[/color]')} className="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 rounded hover:bg-emerald-200">সবুজ কালার</button>
+                <button type="button" onClick={() => insertSyntax('[color=#ef4444]', '[/color]')} className="px-2 py-1 bg-rose-100 text-rose-800 font-bold border border-rose-300 rounded hover:bg-rose-200">লাল কালার</button>
+                <button type="button" onClick={() => insertSyntax('[color=#3b82f6]', '[/color]')} className="px-2 py-1 bg-blue-100 text-blue-800 font-bold border border-blue-300 rounded hover:bg-blue-200">নীল কালার</button>
+                <button type="button" onClick={() => insertSyntax('[color=#f59e0b]', '[/color]')} className="px-2 py-1 bg-amber-100 text-amber-800 font-bold border border-amber-300 rounded hover:bg-amber-200">সোনালী কালার</button>
+              </div>
+
               <textarea
-                rows={6}
+                rows={8}
                 required
                 value={blogContent}
                 onChange={(e) => setBlogContent(e.target.value)}
-                placeholder="ব্লগের বিস্তারিত লেখা, পয়েন্ট ও নিয়মাবলী..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none"
+                placeholder="ব্লগের বিস্তারিত আলোচনা, পয়েন্ট (###), বুলেট লিস্ট ও কালার টেক্সট দিয়ে লিখুন..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none leading-relaxed"
               />
             </div>
 
@@ -543,6 +576,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blog Writing Guideline & Formatting Manual Modal */}
+      {showGuideline && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowGuideline(false)}>
+          <div className="bg-white max-w-2xl w-full rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto border border-slate-200" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-extrabold text-slate-900 text-lg">ব্লগ রাইটিং গাইডলাইন ও অ্যাডভান্স ফরম্যাটিং ম্যানুয়াল</h3>
+              </div>
+              <button onClick={() => setShowGuideline(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <p className="bg-emerald-50 text-emerald-900 p-3 rounded-xl border border-emerald-200 font-medium">
+                💡 <strong>মেইন সাইট রেন্ডারিং নোটিশ:</strong> অ্যাডমিন প্যানেল থেকে যেভাবে বোল্ড, ইটালিক, বুলেট পয়েন্ট, হেডিং এবং টেক্সটের বিভিন্ন কালার দিয়ে পোস্ট তৈরি করবেন, মেইন সাইটে (Business Idea Zone) ঠিক একই ডিজাইন ও কালার ফরম্যাটে রিডারের কাছে প্রদর্শিত হবে।
+              </p>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-slate-900 text-sm border-b pb-1">১. হোয়াটসঅ্যাপ শর্টকাট (WhatsApp Style Formatting)</h4>
+                <ul className="space-y-2 font-mono text-xs">
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700 font-bold">**বোল্ড টেক্সট**</span> বা <span className="text-emerald-700 font-bold">*বোল্ড টেক্সট*</span> 👉 <strong>গঢ়ো বোল্ড ফন্টে দেখাবে</strong>
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700 font-bold">_ইটালিক টেক্সট_</span> 👉 <em>বাঁকানো বা ইটালিক ফন্টে দেখাবে</em>
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700 font-bold">~কাটা টেক্সট~</span> 👉 <del>দাগ কাটা বা স্ট্রাইকথ্রু দেখাবে</del>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-slate-900 text-sm border-b pb-1">২. কাস্টম টেক্সট কালার (Custom Colors)</h4>
+                <ul className="space-y-2 font-mono text-xs">
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700">[color=#10b981]সবুজ কালার টেক্সট[/color]</span> 👉 <span style={{ color: '#10b981' }} className="font-bold">সবুজ টেক্সট</span>
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-rose-700">[color=#ef4444]লাল কালার সতর্কবার্তা[/color]</span> 👉 <span style={{ color: '#ef4444' }} className="font-bold">লাল কালার সতর্কবার্তা</span>
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-blue-700">[color=#3b82f6]নীল কালার হাইলাইট[/color]</span> 👉 <span style={{ color: '#3b82f6' }} className="font-bold">নীল কালার হাইলাইট</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-slate-900 text-sm border-b pb-1">৩. হেডিং, তালিকা ও কোটেশন (Headings & Lists)</h4>
+                <ul className="space-y-2 font-mono text-xs">
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700">### ৩.১ পাইকারি বাজারে যাওয়ার প্রস্তুতি</span> 👉 বড় বোল্ড হেডিং টাইটেল
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700">- পয়েন্ট ১</span> <br /><span className="text-emerald-700">- পয়েন্ট ২</span> 👉 সুন্দর সবুজ ডট যুক্ত বুলেট পয়েন্ট লিস্ট
+                  </li>
+                  <li className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-emerald-700">&gt; ব্যবসা শুরু করার প্রথম নিয়ম হলো হিসাব রাখা।</span> 👉 হাইলাইটেড সবুজ বর্ডার কোটেশন বক্স
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t flex justify-end">
+              <button
+                onClick={() => setShowGuideline(false)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow cursor-pointer"
+              >
+                ঠিক আছে, বুঝেছি
+              </button>
             </div>
           </div>
         </div>
