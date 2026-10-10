@@ -65,6 +65,8 @@ let isMongoConnected = false;
 let memoryIdeas = [...initialSourcingIdeas];
 let memoryBlogs = [...initialBlogPosts];
 
+mongoose.set('bufferCommands', false);
+
 export async function initDatabase() {
   if (mongoose.connection.readyState === 1) {
     isMongoConnected = true;
@@ -76,15 +78,16 @@ export async function initDatabase() {
   }
   try {
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 3000
+      serverSelectionTimeoutMS: 1500,
+      connectTimeoutMS: 1500
     });
     isMongoConnected = true;
 
     // Seed database if empty
-    const count = await IdeaModel.countDocuments();
+    const count = await IdeaModel.countDocuments().catch(() => 1);
     if (count === 0) {
-      await IdeaModel.insertMany(initialSourcingIdeas as any[]);
-      await BlogModel.insertMany(initialBlogPosts as any[]);
+      await IdeaModel.insertMany(initialSourcingIdeas as any[]).catch(() => {});
+      await BlogModel.insertMany(initialBlogPosts as any[]).catch(() => {});
     }
   } catch (err: any) {
     isMongoConnected = false;
