@@ -12,34 +12,40 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  try {
-    if (req.method === 'GET') {
-      if (MONGODB_URI) {
-        let client: MongoClient | null = null;
-        try {
-          client = new MongoClient(MONGODB_URI, {
-            connectTimeoutMS: 2000,
-            serverSelectionTimeoutMS: 2000
-          });
+  if (req.method === 'GET') {
+    if (MONGODB_URI) {
+      let client: MongoClient | null = null;
+      try {
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        await client.connect();
+        const db = client.db('uddokta_db');
+        const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
+        await client.close().catch(() => {});
 
-          await client.connect();
-          const db = client.db('uddokta_db');
-          const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
-          await client.close().catch(() => {});
-
-          if (blogs && blogs.length > 0) {
-            const clean = blogs.map((b: any) => ({ ...b, _id: String(b._id) }));
-            return res.status(200).json({ success: true, count: clean.length, data: clean });
-          }
-        } catch (err: any) {
-          if (client) await client.close().catch(() => {});
-          console.log('MongoDB Atlas blogs fetch fallback:', err.message);
+        if (blogs && Array.isArray(blogs) && blogs.length > 0) {
+          const clean = blogs.map((b: any) => ({
+            id: String(b._id || b.id),
+            _id: String(b._id || b.id),
+            title: String(b.title || ''),
+            category: String(b.category || ''),
+            excerpt: String(b.excerpt || ''),
+            content: String(b.content || ''),
+            author: String(b.author || 'মোঃ দেলোয়ার হোসেন (মিথুন)'),
+            authorTitle: String(b.authorTitle || 'Founder & CEO, Regards Tech'),
+            readTime: String(b.readTime || '৫ মিনিট'),
+            createdAt: String(b.createdAt || '')
+          }));
+          return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
+      } catch (err: any) {
+        if (client) await client.close().catch(() => {});
       }
-      return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
     }
+    return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
+  }
 
-    if (req.method === 'POST') {
+  if (req.method === 'POST') {
+    try {
       const {
         title,
         category,
@@ -67,11 +73,7 @@ export default async function handler(req: any, res: any) {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
-          client = new MongoClient(MONGODB_URI, {
-            connectTimeoutMS: 2000,
-            serverSelectionTimeoutMS: 2000
-          });
-
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
           await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('blogs').insertOne(newBlog);
@@ -79,15 +81,14 @@ export default async function handler(req: any, res: any) {
           return res.status(201).json({ success: true, data: { ...newBlog, _id: String(result.insertedId) } });
         } catch (err: any) {
           if (client) await client.close().catch(() => {});
-          console.log('MongoDB Atlas insert blog fallback:', err.message);
         }
       }
 
       return res.status(201).json({ success: true, data: { ...newBlog, id: `blog-${Date.now()}` } });
+    } catch (postErr: any) {
+      return res.status(500).json({ success: false, error: postErr.message });
     }
-
-    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
-  } catch (globalErr: any) {
-    return res.status(200).json({ success: true, count: initialBlogPosts.length, data: initialBlogPosts });
   }
+
+  return res.status(405).json({ success: false, message: 'Method Not Allowed' });
 }
