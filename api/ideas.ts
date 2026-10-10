@@ -1,5 +1,7 @@
 import { initialSourcingIdeas } from './data/ideasData';
 
+const MONGODB_URI = process.env.MONGODB_URI || '';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -9,21 +11,25 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  const MONGODB_URI = process.env.MONGODB_URI;
-
   if (req.method === 'GET') {
     if (MONGODB_URI) {
+      let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
         await client.connect();
-        const items = await client.db('uddokta_db').collection('ideas').find({}).sort({ _id: -1 }).toArray();
+        const db = client.db('uddokta_db');
+        const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
         await client.close().catch(() => {});
-        if (items && Array.isArray(items) && items.length > 0) {
-          const clean = items.map((i: any) => ({ ...i, _id: String(i._id) }));
+        if (ideas && Array.isArray(ideas) && ideas.length > 0) {
+          const clean = JSON.parse(JSON.stringify(ideas)).map((i: any) => ({
+            ...i,
+            _id: String(i._id || i.id || '')
+          }));
           return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
       } catch (err: any) {
+        if (client) await client.close().catch(() => {});
         console.log('MongoDB ideas fetch error:', err.message);
       }
     }
@@ -69,14 +75,16 @@ export default async function handler(req: any, res: any) {
     };
 
     if (MONGODB_URI) {
+      let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
         await client.connect();
         const result = await client.db('uddokta_db').collection('ideas').insertOne(newIdea);
         await client.close().catch(() => {});
         return res.status(201).json({ success: true, data: { ...newIdea, _id: String(result.insertedId) } });
       } catch (err: any) {
+        if (client) await client.close().catch(() => {});
         console.log('MongoDB insert idea error:', err.message);
       }
     }

@@ -13,19 +13,24 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     if (MONGODB_URI) {
+      let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
         await client.connect();
         const db = client.db('uddokta_db');
         const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
         await client.close().catch(() => {});
 
         if (blogs && Array.isArray(blogs) && blogs.length > 0) {
-          const clean = blogs.map((b: any) => ({ ...b, _id: String(b._id) }));
+          const clean = JSON.parse(JSON.stringify(blogs)).map((b: any) => ({
+            ...b,
+            _id: String(b._id || b.id || '')
+          }));
           return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
       } catch (err: any) {
+        if (client) await client.close().catch(() => {});
         console.log('MongoDB Atlas blogs fetch error:', err.message);
       }
     }
@@ -59,15 +64,17 @@ export default async function handler(req: any, res: any) {
       };
 
       if (MONGODB_URI) {
+        let client: any = null;
         try {
           const { MongoClient } = await import('mongodb');
-          const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
           await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('blogs').insertOne(newBlog);
           await client.close().catch(() => {});
           return res.status(201).json({ success: true, data: { ...newBlog, _id: String(result.insertedId) } });
         } catch (err: any) {
+          if (client) await client.close().catch(() => {});
           console.log('MongoDB Atlas insert blog error:', err.message);
         }
       }
