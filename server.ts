@@ -52,6 +52,8 @@ const BusinessIdeaSchema = new mongoose.Schema({
   },
   likes: { type: Number, default: 12 },
   dislikes: { type: Number, default: 0 },
+  likedBy: { type: [String], default: [] },
+  dislikedBy: { type: [String], default: [] },
   comments: [CommentSchema],
   createdAt: { type: String, default: () => new Date().toLocaleDateString('bn-BD') }
 });
@@ -369,6 +371,115 @@ app.post('/api/ideas/:id/comments', async (req, res) => {
       if (!item.comments) item.comments = [];
       item.comments.push(newC);
       return res.status(201).json({ success: true, data: newC });
+    }
+
+// POST reaction (Like / Dislike toggle like Facebook)
+app.post('/api/ideas/:id/reaction', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, userId } = req.body; // action: 'like' | 'dislike', userId: string
+    const user = userId || req.headers['x-forwarded-for'] || req.ip || 'anonymous';
+
+    if (isMongoConnected) {
+      const item = await IdeaModel.findById(id);
+      if (item) {
+        if (!Array.isArray(item.likedBy)) item.likedBy = [];
+        if (!Array.isArray(item.dislikedBy)) item.dislikedBy = [];
+
+        const hasLiked = item.likedBy.includes(user);
+        const hasDisliked = item.dislikedBy.includes(user);
+
+        let userReaction: 'like' | 'dislike' | null = null;
+
+        if (action === 'like') {
+          if (hasLiked) {
+            // Withdraw like
+            item.likedBy = item.likedBy.filter((u: string) => u !== user);
+            item.likes = Math.max(0, (item.likes || 1) - 1);
+            userReaction = null;
+          } else {
+            // Add like, remove dislike if present
+            item.likedBy.push(user);
+            item.likes = (item.likes || 0) + 1;
+            if (hasDisliked) {
+              item.dislikedBy = item.dislikedBy.filter((u: string) => u !== user);
+              item.dislikes = Math.max(0, (item.dislikes || 1) - 1);
+            }
+            userReaction = 'like';
+          }
+        } else if (action === 'dislike') {
+          if (hasDisliked) {
+            // Withdraw dislike
+            item.dislikedBy = item.dislikedBy.filter((u: string) => u !== user);
+            item.dislikes = Math.max(0, (item.dislikes || 1) - 1);
+            userReaction = null;
+          } else {
+            // Add dislike, remove like if present
+            item.dislikedBy.push(user);
+            item.dislikes = (item.dislikes || 0) + 1;
+            if (hasLiked) {
+              item.likedBy = item.likedBy.filter((u: string) => u !== user);
+              item.likes = Math.max(0, (item.likes || 1) - 1);
+            }
+            userReaction = 'dislike';
+          }
+        }
+
+        await item.save();
+        return res.json({
+          success: true,
+          likesCount: item.likes,
+          dislikesCount: item.dislikes,
+          userReaction,
+        });
+      }
+    }
+
+    const item = memoryIdeas.find((i: any) => i.id === id || i._id?.toString() === id);
+    if (item) {
+      if (!Array.isArray(item.likedBy)) item.likedBy = [];
+      if (!Array.isArray(item.dislikedBy)) item.dislikedBy = [];
+
+      const hasLiked = item.likedBy.includes(user);
+      const hasDisliked = item.dislikedBy.includes(user);
+      let userReaction: 'like' | 'dislike' | null = null;
+
+      if (action === 'like') {
+        if (hasLiked) {
+          item.likedBy = item.likedBy.filter((u: string) => u !== user);
+          item.likes = Math.max(0, (item.likes || 1) - 1);
+          userReaction = null;
+        } else {
+          item.likedBy.push(user);
+          item.likes = (item.likes || 0) + 1;
+          if (hasDisliked) {
+            item.dislikedBy = item.dislikedBy.filter((u: string) => u !== user);
+            item.dislikes = Math.max(0, (item.dislikes || 1) - 1);
+          }
+          userReaction = 'like';
+        }
+      } else if (action === 'dislike') {
+        if (hasDisliked) {
+          item.dislikedBy = item.dislikedBy.filter((u: string) => u !== user);
+          item.dislikes = Math.max(0, (item.dislikes || 1) - 1);
+          userReaction = null;
+        } else {
+          item.dislikedBy.push(user);
+          item.dislikes = (item.dislikes || 0) + 1;
+          if (hasLiked) {
+            item.likedBy = item.likedBy.filter((u: string) => u !== user);
+            item.likes = Math.max(0, (item.likes || 1) - 1);
+          }
+          userReaction = 'dislike';
+        }
+      }
+
+      return res.json({
+        success: true,
+        likesCount: item.likes,
+        dislikesCount: item.dislikes,
+        userReaction,
+      });
     }
 
     res.status(404).json({ success: false, message: 'Idea not found' });
