@@ -43,11 +43,13 @@ const BusinessIdeaSchema = new mongoose.Schema({
   },
   isVerified: { type: Boolean, default: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
+  userId: { type: String, default: '' },
   authorEmail: { type: String, default: '' },
   authorPhone: { type: String, default: '' },
   postedBy: {
     name: { type: String, default: 'উদ্যোক্তা অ্যাডমিন' },
     role: { type: String, default: 'অ্যাডমিন' },
+    email: { type: String, default: '' },
     isVerifiedUser: { type: Boolean, default: true }
   },
   likes: { type: Number, default: 12 },
@@ -169,10 +171,20 @@ app.post('/api/admin/login', (req, res) => {
 // GET ideas (supports ?status=approved | pending | all, defaults to all for admin, approved for public)
 app.get('/api/ideas', async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, userId, authorEmail } = req.query;
     let query: any = {};
     if (status && status !== 'all') {
       query.status = status;
+    }
+    const userFilters: any[] = [];
+    if (userId) {
+      userFilters.push({ userId }, { 'author.id': userId });
+    }
+    if (authorEmail) {
+      userFilters.push({ authorEmail }, { 'postedBy.email': authorEmail });
+    }
+    if (userFilters.length > 0) {
+      query.$or = userFilters;
     }
 
     if (isMongoConnected) {
@@ -183,6 +195,13 @@ app.get('/api/ideas', async (req, res) => {
     let result = [...memoryIdeas];
     if (status && status !== 'all') {
       result = result.filter((i: any) => (i.status || 'approved') === status);
+    }
+    if (userId || authorEmail) {
+      result = result.filter((i: any) => {
+        const matchesUser = userId && (i.userId === userId || i.author?.id === userId);
+        const matchesEmail = authorEmail && (i.authorEmail === authorEmail || i.postedBy?.email === authorEmail);
+        return matchesUser || matchesEmail;
+      });
     }
     return res.json({ success: true, count: result.length, data: result });
   } catch (e: any) {
@@ -210,11 +229,13 @@ app.post('/api/ideas', async (req, res) => {
       supplierTip = '',
       coordinates = { lat: 23.8583, lng: 90.2667 },
       status = 'approved',
+      userId = '',
       authorEmail = '',
       authorPhone = '',
       postedBy = {
         name: req.body.status === 'pending' ? 'উদ্যোক্তা ব্যবহারকারী' : 'উদ্যোক্তা অ্যাডমিন',
         role: req.body.status === 'pending' ? 'ব্যবহারকারী' : 'অ্যাডমিন',
+        email: req.body.authorEmail || '',
         isVerifiedUser: req.body.status !== 'pending'
       }
     } = req.body;
@@ -230,6 +251,13 @@ app.post('/api/ideas', async (req, res) => {
 
     const finalWholesaleText = wholesalePriceText || ((wMax && wMax > wMin) ? `${wMin}-${wMax}` : String(wMin));
     const finalRetailText = retailPriceText || ((rMax && rMax > rMin) ? `${rMin}-${rMax}` : String(rMin));
+
+    const finalPostedBy = {
+      name: postedBy?.name || (status === 'pending' ? 'উদ্যোক্তা ব্যবহারকারী' : 'উদ্যোক্তা অ্যাডমিন'),
+      role: postedBy?.role || (status === 'pending' ? 'ব্যবহারকারী' : 'অ্যাডমিন'),
+      email: authorEmail || postedBy?.email || '',
+      isVerifiedUser: status === 'approved'
+    };
 
     if (isMongoConnected) {
       const newIdea = await IdeaModel.create({
@@ -249,9 +277,10 @@ app.post('/api/ideas', async (req, res) => {
         supplierTip,
         coordinates,
         status: status || 'approved',
+        userId,
         authorEmail,
         authorPhone,
-        postedBy,
+        postedBy: finalPostedBy,
         isVerified: status === 'approved'
       });
       return res.status(201).json({ success: true, data: newIdea });
@@ -276,9 +305,10 @@ app.post('/api/ideas', async (req, res) => {
       supplierTip,
       coordinates,
       status: status || 'approved',
+      userId,
       authorEmail,
       authorPhone,
-      postedBy,
+      postedBy: finalPostedBy,
       isVerified: status === 'approved',
       verificationBadgeText: status === 'approved' ? 'ভেরিফায়েড প্রজেক্ট' : 'পেন্ডিং রিকোয়েস্ট',
       lastUpdated: new Date().toLocaleDateString('bn-BD'),
@@ -372,6 +402,12 @@ app.post('/api/ideas/:id/comments', async (req, res) => {
       item.comments.push(newC);
       return res.status(201).json({ success: true, data: newC });
     }
+
+    return res.status(404).json({ success: false, message: 'Idea not found' });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // POST reaction (Like / Dislike toggle like Facebook)
 app.post('/api/ideas/:id/reaction', async (req, res) => {
