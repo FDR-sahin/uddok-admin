@@ -35,8 +35,9 @@ export interface SourcingIdea {
   likes: number;
   dislikes: number;
   comments: Comment[];
-  supplierTip?: string;
-  contactNumber?: string;
+  status?: 'pending' | 'approved' | 'rejected';
+  authorEmail?: string;
+  authorPhone?: string;
   postedBy: {
     name: string;
     role: string;

@@ -42,6 +42,14 @@ const BusinessIdeaSchema = new mongoose.Schema({
     lng: { type: Number, default: 90.2667 }
   },
   isVerified: { type: Boolean, default: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
+  authorEmail: { type: String, default: '' },
+  authorPhone: { type: String, default: '' },
+  postedBy: {
+    name: { type: String, default: 'উদ্যোক্তা অ্যাডমিন' },
+    role: { type: String, default: 'অ্যাডমিন' },
+    isVerifiedUser: { type: Boolean, default: true }
+  },
   likes: { type: Number, default: 12 },
   dislikes: { type: Number, default: 0 },
   comments: [CommentSchema],
@@ -156,20 +164,31 @@ app.post('/api/admin/login', (req, res) => {
 
 // --- BUSINESS IDEAS / SOURCING ---
 
-// GET all ideas
+// GET ideas (supports ?status=approved | pending | all, defaults to all for admin, approved for public)
 app.get('/api/ideas', async (req, res) => {
   try {
+    const { status } = req.query;
+    let query: any = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
     if (isMongoConnected) {
-      const ideas = await IdeaModel.find().sort({ _id: -1 });
+      const ideas = await IdeaModel.find(query).sort({ _id: -1 });
       return res.json({ success: true, count: ideas.length, data: ideas });
     }
-    return res.json({ success: true, count: memoryIdeas.length, data: memoryIdeas });
+
+    let result = [...memoryIdeas];
+    if (status && status !== 'all') {
+      result = result.filter((i: any) => (i.status || 'approved') === status);
+    }
+    return res.json({ success: true, count: result.length, data: result });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// POST new idea (Admin)
+// POST new idea (Admin or User post submission)
 app.post('/api/ideas', async (req, res) => {
   try {
     const {
@@ -187,7 +206,15 @@ app.post('/api/ideas', async (req, res) => {
       moq = '১০ পিস',
       description = '',
       supplierTip = '',
-      coordinates = { lat: 23.8583, lng: 90.2667 }
+      coordinates = { lat: 23.8583, lng: 90.2667 },
+      status = 'approved',
+      authorEmail = '',
+      authorPhone = '',
+      postedBy = {
+        name: req.body.status === 'pending' ? 'উদ্যোক্তা ব্যবহারকারী' : 'উদ্যোক্তা অ্যাডমিন',
+        role: req.body.status === 'pending' ? 'ব্যবহারকারী' : 'অ্যাডমিন',
+        isVerifiedUser: req.body.status !== 'pending'
+      }
     } = req.body;
 
     const wMin = Number(wholesalePrice || 0);
@@ -199,6 +226,9 @@ app.post('/api/ideas', async (req, res) => {
       ? Number(retailPriceMax)
       : undefined;
 
+    const finalWholesaleText = wholesalePriceText || ((wMax && wMax > wMin) ? `${wMin}-${wMax}` : String(wMin));
+    const finalRetailText = retailPriceText || ((rMax && rMax > rMin) ? `${rMin}-${rMax}` : String(rMin));
+
     if (isMongoConnected) {
       const newIdea = await IdeaModel.create({
         title: title || 'নতুন বিজনেস সোর্সিং আইডিয়া',
@@ -207,16 +237,20 @@ app.post('/api/ideas', async (req, res) => {
         exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
         wholesalePrice: wMin,
         wholesalePriceMax: wMax,
-        wholesalePriceText: wholesalePriceText || (wMax ? `${wMin}-${wMax}` : String(wMin)),
+        wholesalePriceText: finalWholesaleText,
         retailPrice: rMin,
         retailPriceMax: rMax,
-        retailPriceText: retailPriceText || (rMax ? `${rMin}-${rMax}` : String(rMin)),
+        retailPriceText: finalRetailText,
         unit,
         moq,
         description,
         supplierTip,
         coordinates,
-        isVerified: true
+        status: status || 'approved',
+        authorEmail,
+        authorPhone,
+        postedBy,
+        isVerified: status === 'approved'
       });
       return res.status(201).json({ success: true, data: newIdea });
     }
@@ -230,17 +264,21 @@ app.post('/api/ideas', async (req, res) => {
       exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
       wholesalePrice: wMin,
       wholesalePriceMax: wMax,
-      wholesalePriceText: wholesalePriceText || (wMax ? `${wMin}-${wMax}` : String(wMin)),
+      wholesalePriceText: finalWholesaleText,
       retailPrice: rMin,
       retailPriceMax: rMax,
-      retailPriceText: retailPriceText || (rMax ? `${rMin}-${rMax}` : String(rMin)),
+      retailPriceText: finalRetailText,
       unit,
       moq,
       description,
       supplierTip,
       coordinates,
-      isVerified: true,
-      verificationBadgeText: 'ভেরিফায়েড প্রজেক্ট',
+      status: status || 'approved',
+      authorEmail,
+      authorPhone,
+      postedBy,
+      isVerified: status === 'approved',
+      verificationBadgeText: status === 'approved' ? 'ভেরিফায়েড প্রজেক্ট' : 'পেন্ডিং রিকোয়েস্ট',
       lastUpdated: new Date().toLocaleDateString('bn-BD'),
       tags: [`#${district || 'ঢাকা'}`, `#${category || 'সোর্সিং'}`],
       likes: 0,

@@ -19,7 +19,10 @@ import {
   X,
   Compass,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  Clock,
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { BlogPost, SourcingIdea } from './types';
 import { initialBlogPosts } from './data/blogsData';
@@ -64,8 +67,8 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
-  // Exactly TWO Tabs
-  const [activeTab, setActiveTab] = useState<'ideas' | 'blogs'>('ideas');
+  // Three Tabs
+  const [activeTab, setActiveTab] = useState<'ideas' | 'blogs' | 'requests'>('ideas');
 
   // Data States
   const [ideas, setIdeas] = useState<SourcingIdea[]>([]);
@@ -310,6 +313,39 @@ export default function App() {
     showToast('আইডিয়া কার্ডটি মুছে ফেলা হয়েছে।');
   };
 
+  // Approve User Post Request
+  const handleApproveIdea = async (idea: any) => {
+    const id = idea._id || idea.id;
+    const updated = { ...idea, status: 'approved', isVerified: true };
+    try {
+      await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    setIdeas((prev) => prev.map((item: any) => ((String(item._id) === String(id) || String(item.id) === String(id)) ? updated : item)));
+    showToast('ইউজারের পোস্টটি সফলভাবে অ্যাপ্রুভ করা হয়েছে এবং সাইটে লাইভ হয়েছে!');
+  };
+
+  // Reject User Post Request
+  const handleRejectIdea = async (id: string) => {
+    if (!confirm('আপনি কি এই পোস্ট রিকোয়েস্টটি রিজেক্ট করতে চান?')) return;
+    try {
+      await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' })
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    setIdeas((prev) => prev.map((item: any) => ((String(item._id) === String(id) || String(item.id) === String(id)) ? { ...item, status: 'rejected' } : item)));
+    showToast('পোস্ট রিকোয়েস্টটি রিজেক্ট করা হয়েছে।');
+  };
+
   // 4. Post Blog
   const handlePostBlog = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -527,20 +563,39 @@ export default function App() {
           </div>
         </div>
 
-        {/* EXACTLY TWO TABS */}
-        <div className="max-w-6xl mx-auto px-4 flex gap-4 border-t border-slate-100">
+        {/* THREE TABS */}
+        <div className="max-w-6xl mx-auto px-4 flex gap-2 sm:gap-4 border-t border-slate-100 overflow-x-auto">
           <button
             onClick={() => {
               setActiveTab('ideas');
               setSelectedIdeaPreview(null);
             }}
-            className={`py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            className={`py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'ideas'
                 ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            ১. নতুন বিজনেস আইডিয়া কার্ড পোস্ট ({ideas.length}টি)
+            ১. বিজনেস আইডিয়া কার্ড ({ideas.filter((i: any) => (i.status || 'approved') === 'approved').length}টি)
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('requests');
+              setSelectedIdeaPreview(null);
+            }}
+            className={`py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'requests'
+                ? 'border-amber-600 text-amber-700 bg-amber-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>২. ইউজার পোস্ট রিকোয়েস্ট</span>
+            {ideas.filter((i: any) => i.status === 'pending').length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500 text-white animate-pulse">
+                {ideas.filter((i: any) => i.status === 'pending').length}
+              </span>
+            )}
           </button>
 
           <button
@@ -548,13 +603,13 @@ export default function App() {
               setActiveTab('blogs');
               setSelectedBlogPreview(null);
             }}
-            className={`py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            className={`py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'blogs'
                 ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            ২. নতুন ব্লগ পোস্ট ({blogs.length}টি)
+            ৩. উদ্যোক্তা ব্লগ ({blogs.length}টি)
           </button>
         </div>
       </header>
@@ -766,7 +821,7 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {ideas.map((item: any) => {
+                {ideas.filter((i: any) => (i.status || 'approved') === 'approved').map((item: any) => {
                   const id = item._id || item.id;
                   const profit = item.retailPrice - item.wholesalePrice;
                   return (
@@ -858,7 +913,132 @@ export default function App() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 2: BLOG POSTING & BLOGS MANAGEMENT                   */}
+        {/* TAB 2: USER POST REQUESTS & APPROVAL MANAGEMENT          */}
+        {/* ======================================================== */}
+        {activeTab === 'requests' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  <h2 className="text-lg font-bold text-slate-900">
+                    ইউজারদের পোস্ট রিকোয়েস্ট ও অনুমোদন বক্স
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  মূল সাইট থেকে সাধারণ ব্যবহারকারীরা পোস্ট করলে এখানে জমা থাকবে। আপনি &quot;অনুমোদন / লাইভ করুন&quot; বাটনে চাপলে সরাসরি মেইন সাইটে প্রদর্শিত হবে।
+                </p>
+              </div>
+              <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold shrink-0">
+                মোট পেন্ডিং: {ideas.filter((i: any) => i.status === 'pending').length} টি
+              </div>
+            </div>
+
+            {ideas.filter((i: any) => i.status === 'pending').length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-slate-800">বর্তমানে কোনো পেন্ডিং পোস্ট রিকোয়েস্ট নেই!</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  মেইন সাইট থেকে কোনো ব্যবহারকারী নতুন বিজনেস পোস্ট সাবমিট করলে তা অনুমোদনের জন্য এই বক্সে চলে আসবে।
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {ideas.filter((i: any) => i.status === 'pending').map((item: any) => {
+                  const id = item._id || item.id;
+                  return (
+                    <div
+                      key={id}
+                      className="bg-white rounded-2xl border-2 border-amber-300 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                    >
+                      <div>
+                        {/* Top Badge: Pending & Category */}
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-amber-700" />
+                            অপেক্ষমান
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                            {item.category}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h4 
+                          onClick={() => setSelectedIdeaPreview(item)}
+                          className="font-extrabold text-slate-900 text-base hover:text-emerald-700 transition-colors cursor-pointer line-clamp-2 mb-2"
+                        >
+                          {item.title}
+                        </h4>
+
+                        {/* Submitter Info */}
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 mb-3 space-y-1 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">প্রেরক:</span>
+                            <span className="font-bold text-slate-700">{item.postedBy?.name || item.author || 'উদ্যোক্তা ভিজিটর'}</span>
+                          </div>
+                          {item.district && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">এলাকা:</span>
+                              <span className="font-semibold text-slate-700">{item.district} ({item.exactLocation || 'নির্দিষ্ট ঠিকানা নেই'})</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Price Details */}
+                        <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-100 grid grid-cols-2 gap-2 text-center text-xs mb-3">
+                          <div>
+                            <span className="text-[10px] text-slate-500 block">পাইকারি রেঞ্জ</span>
+                            <span className="font-bold text-slate-900 block truncate">
+                              {formatPriceRange(item.wholesalePrice, item.wholesalePriceMax, item.wholesalePriceText)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 block">খুচরা রেঞ্জ</span>
+                            <span className="font-bold text-slate-900 block truncate">
+                              {formatPriceRange(item.retailPrice, item.retailPriceMax, item.retailPriceText)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Description Preview */}
+                        {item.description && (
+                          <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded-lg border border-slate-100 mb-3">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Approval / Rejection action buttons */}
+                      <div className="mt-2 pt-3 border-t border-slate-100 flex items-center gap-2">
+                        <button
+                          onClick={() => handleApproveIdea(item)}
+                          className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          অনুমোদন / লাইভ করুন
+                        </button>
+
+                        <button
+                          onClick={() => handleRejectIdea(id)}
+                          className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+                          title="বাতিল করুন"
+                        >
+                          বাতিল
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 3: BLOG POSTING & BLOGS MANAGEMENT                   */}
         {/* ======================================================== */}
         {activeTab === 'blogs' && (
           <div className="space-y-8">
