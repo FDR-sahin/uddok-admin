@@ -201,10 +201,10 @@ export default function App() {
       exactLocation: ideaLocation.trim() || `${ideaDistrict.trim() || 'ঢাকা'}, বাংলাদেশ`,
       wholesalePrice: wRange.min,
       wholesalePriceMax: wRange.max,
-      wholesalePriceText: ideaWholesale.trim() || (wRange.max ? `${wRange.min}-${wRange.max}` : undefined),
+      wholesalePriceText: (wRange.max && wRange.max > wRange.min) ? `${wRange.min}-${wRange.max}` : (ideaWholesale.trim() || String(wRange.min)),
       retailPrice: rRange.min,
       retailPriceMax: rRange.max,
-      retailPriceText: ideaRetail.trim() || (rRange.max ? `${rRange.min}-${rRange.max}` : undefined),
+      retailPriceText: (rRange.max && rRange.max > rRange.min) ? `${rRange.min}-${rRange.max}` : (ideaRetail.trim() || String(rRange.min)),
       description: ideaDesc || `${ideaDistrict || 'ঢাকা'}-এ ${ideaCategory || 'পণ্য'} পাইকারি সোর্সিং ও খুচরা বিক্রয় সুবিধা।`,
       unit: 'প্রতি পিস',
       moq: '১০ পিস',
@@ -273,10 +273,10 @@ export default function App() {
       ...editingIdea,
       wholesalePrice: wRange.min,
       wholesalePriceMax: wRange.max,
-      wholesalePriceText: editingIdea.wholesalePriceText || (wRange.max ? `${wRange.min}-${wRange.max}` : String(wRange.min)),
+      wholesalePriceText: (wRange.max && wRange.max > wRange.min) ? `${wRange.min}-${wRange.max}` : (editingIdea.wholesalePriceText || String(wRange.min)),
       retailPrice: rRange.min,
       retailPriceMax: rRange.max,
-      retailPriceText: editingIdea.retailPriceText || (rRange.max ? `${rRange.min}-${rRange.max}` : String(rRange.min)),
+      retailPriceText: (rRange.max && rRange.max > rRange.min) ? `${rRange.min}-${rRange.max}` : (editingIdea.retailPriceText || String(rRange.min)),
     };
 
     try {
