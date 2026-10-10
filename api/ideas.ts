@@ -2,7 +2,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
-const fallbackIdeas = [
+const fallbackIdeas: any[] = [
   {
     id: 'sourcing-1',
     title: 'Savar-এ MILK পাইকারি সোর্সিং',
@@ -26,6 +26,126 @@ const fallbackIdeas = [
     contactNumber: '+880 1712-398412',
     postedBy: { name: 'উদ্যোগ বন্ধু টিম (ভেরিফায়েড)', role: 'ফিল্ড রিসার্চার', isVerifiedUser: true },
     comments: []
+  },
+  {
+    id: 'sourcing-2',
+    title: 'চকবাজার জুয়েলারি ও ট্রেন্ডি হেয়ার এক্সেসরিজ পাইকারি সোর্সিং',
+    category: 'পোশাক ও গহনা',
+    district: 'ঢাকা',
+    upazilaOrArea: 'পুরান ঢাকা',
+    exactLocation: 'চক মোগলটুলী, আশিক প্লাজা ও খান মার্কেট ৩য় তলা, চকবাজার, পুরান ঢাকা',
+    coordinates: { lat: 23.7161, lng: 90.3957 },
+    wholesalePrice: 40,
+    retailPrice: 120,
+    unit: 'প্রতি পিস',
+    moq: '১২ পিস (১ ডজন)',
+    isVerified: true,
+    verificationBadgeText: 'ভেরিফায়েড হাব',
+    lastUpdated: '০৯ অক্টোবর, ২০২৪',
+    description: 'চকবাজারের আশিক প্লাজায় সরাসরি ইমপোর্টাররা বসেন। খুচরা বাজারে যা ১২০-১৫০ টাকায় বিক্রি হয়, পাইকারিতে মাত্র ৩৫-৪৫ টাকায় ডজন হিসেবে পাওয়া যায়।',
+    tags: ['#চকবাজার', '#জুয়েলারি', '#এক্সেসরিজ', '#পুরানঢাকা', '#মেকআপ'],
+    likes: 145,
+    dislikes: 2,
+    supplierTip: 'দোকানে গিয়ে স্যাম্পল হিসেবে ১ ডজন ডেমো দেখতে চাইবেন।',
+    contactNumber: '+880 1819-876543',
+    postedBy: { name: 'ফারহান আহমেদ', role: 'কমিউনিটি সুপারভাইজার', isVerifiedUser: true },
+    comments: []
+  },
+  {
+    id: 'sourcing-3',
+    title: 'ইসলামপুর সুতি প্রিন্ট ও প্রিমিয়াম থান কাপড় পাইকারি মোকাম',
+    category: 'পোশাক',
+    district: 'ঢাকা',
+    upazilaOrArea: 'কোতোয়ালী',
+    exactLocation: 'জাহানারা গার্ডেন মার্কেট ও আহসান উল্লাহ রোড, ইসলামপুর টেক্সটাইল হাব, ঢাকা',
+    coordinates: { lat: 23.7099, lng: 90.4072 },
+    wholesalePrice: 55,
+    retailPrice: 95,
+    unit: 'প্রতি গজ',
+    moq: '২০ গজ (১ থান)',
+    isVerified: true,
+    verificationBadgeText: 'ভেরিফায়েড মার্কেট',
+    lastUpdated: '০৮ অক্টোবর, ২০২৪',
+    description: 'থ্রি-পিস, কুর্তি, বেবি ফ্রক বা কাস্টম হোম ডেকোর তৈরির কাপড়ের জন্য দেশের প্রধানতম পাইকারি মোকাম ইসলামপুর।',
+    tags: ['#ইসলামপুর', '#কাপড়পাইকারি', '#থানকাপড়', '#সুতিকাপড়'],
+    likes: 112,
+    dislikes: 1,
+    supplierTip: 'শনিবার ও রবিবার সকালে নতুন লট আসে।',
+    contactNumber: '+880 1911-234567',
+    postedBy: { name: 'মিজানুর রহমান', role: 'টেক্সটাইল স্পেশালিস্ট', isVerifiedUser: true },
+    comments: []
+  },
+  {
+    id: 'sourcing-4',
+    title: 'বগুড়ার শেরপুর স্পেশাল খাঁটি দই ও মাটির সরা পাইকারি সোর্সিং',
+    category: 'খাবার ও দুগ্ধ',
+    district: 'বগুড়া',
+    upazilaOrArea: 'শেরপুর',
+    exactLocation: 'ঢাকা-বগুড়া মহাসড়ক সংলগ্ন ঘোঁষপাড়া মিষ্টি মোকাম, শেরপুর বাজার, বগুড়া',
+    coordinates: { lat: 24.6738, lng: 89.4312 },
+    wholesalePrice: 180,
+    retailPrice: 280,
+    unit: 'প্রতি সরা (১ কেজি)',
+    moq: '১০ সরা',
+    isVerified: true,
+    verificationBadgeText: 'ভেরিফায়েড রুরাল হাব',
+    lastUpdated: '০৭ অক্টোবর, ২০২৪',
+    description: 'ঐতিহ্যবাহী বগুড়ার আসল ক্ষীরসা দই শেরপুরের স্থানীয় কারিগরদের কাছ থেকে সরাসরি পাইকারিতে ১৮০-১৯০ টাকায় সংগৃহীত।',
+    tags: ['#বগুড়াদই', '#শেরপুরমিষ্টি', '#ঐতিহ্যবাহী', '#খাদ্যউদ্যোগ'],
+    likes: 78,
+    dislikes: 0,
+    supplierTip: 'নাইট কোচে সকালে ফ্রেশ পার্সেল পাওয়া যায়।',
+    contactNumber: '+880 1715-998877',
+    postedBy: { name: 'আসাদুল্লাহ আল গালিব', role: 'লোকাল জেলা প্রতিনিধি', isVerifiedUser: true },
+    comments: []
+  },
+  {
+    id: 'sourcing-5',
+    title: 'নরসিংদী বাবুরহাট শেখেরচর তাঁতের সুতি লুঙ্গি ও বেডশিট মোকাম',
+    category: 'পোশাক',
+    district: 'নরসিংদী',
+    upazilaOrArea: 'শেখেরচর',
+    exactLocation: 'শেখেরচর বাবুরহাট প্রধান মার্কেট লেন ৪, ঢাকা-সিলেট মহাসড়ক সংলগ্ন, নরসিংদী',
+    coordinates: { lat: 23.9042, lng: 90.6975 },
+    wholesalePrice: 280,
+    retailPrice: 480,
+    unit: 'প্রতি পিস',
+    moq: '৬ পিস',
+    isVerified: true,
+    verificationBadgeText: 'ভেরিফায়েড কাপড়ের হাট',
+    lastUpdated: '০৬ অক্টোবর, ২০২৪',
+    description: 'এশিয়ার অন্যতম বৃহৎ কাপড়ের হাট শেখেরচর বাবুরহাট। সুতি লুঙ্গি ও বেডশিট সরাসরি তাঁতিদের থেকে সংগৃহীত।',
+    tags: ['#নরসিংদী', '#বাবুরহাট', '#তাঁতেরলুঙ্গি', '#বেডশিট'],
+    likes: 134,
+    dislikes: 1,
+    supplierTip: 'বৃহস্পতি ও শুক্রবার রাত ৩টা থেকে ভোর পর্যন্ত প্রধান কেনাবেচা হয়।',
+    contactNumber: '+880 1622-443322',
+    postedBy: { name: 'মাকসুদুর রহমান', role: 'ট্রেডার ও কন্ট্রিবিউটর', isVerifiedUser: true },
+    comments: []
+  },
+  {
+    id: 'sourcing-6',
+    title: 'যশোর বেনাপোল ও স্থানীয় অর্গানিক খেজুরের গুড় ও কুল পাইকারি হাব',
+    category: 'কৃষি ও খাবার',
+    district: 'যশোর',
+    upazilaOrArea: 'বাঘারপাড়া ও বেনাপোল',
+    exactLocation: 'খাজুরা বাজার ও বাঘারপাড়া গুড়ের মোকাম, যশোর',
+    coordinates: { lat: 23.1664, lng: 89.2137 },
+    wholesalePrice: 160,
+    retailPrice: 270,
+    unit: 'প্রতি কেজি',
+    moq: '১৫ কেজি',
+    isVerified: true,
+    verificationBadgeText: 'ভেরিফায়েড হাব',
+    lastUpdated: '০৫ অক্টোবর, ২০২৪',
+    description: 'যশোরের আসল ঝোলা গুড় ও পাটালি গুড় সরাসরি গাছিদের থেকে সংগৃহীত।',
+    tags: ['#যশোরগুড়', '#পাটালিগুড়', '#অর্গানিকফুড'],
+    likes: 58,
+    dislikes: 1,
+    supplierTip: 'আসল গুড় জিভে নরম হয়ে সহজে গলে যাবে।',
+    contactNumber: '+880 1733-112233',
+    postedBy: { name: 'শামীম ওসমান', role: 'কমিউনিটি মেম্বার', isVerifiedUser: true },
+    comments: []
   }
 ];
 
@@ -39,6 +159,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'GET') {
+    let mongoIdeas: any[] = [];
     if (MONGODB_URI) {
       let client: any = null;
       try {
@@ -49,19 +170,24 @@ export default async function handler(req: any, res: any) {
         await client.close().catch(() => {});
 
         if (ideas && Array.isArray(ideas) && ideas.length > 0) {
-          const clean = JSON.parse(JSON.stringify(ideas)).map((item: any) => ({
+          mongoIdeas = JSON.parse(JSON.stringify(ideas)).map((item: any) => ({
             ...item,
             _id: String(item._id || item.id || ''),
             id: String(item.id || item._id || '')
           }));
-          return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
       } catch (err: any) {
         if (client) await client.close().catch(() => {});
         console.error('MongoDB Atlas ideas fetch error:', err.message);
       }
     }
-    return res.status(200).json({ success: true, count: fallbackIdeas.length, data: fallbackIdeas });
+
+    // Merge mongoIdeas with fallbackIdeas preventing duplicate IDs
+    const mongoIds = new Set(mongoIdeas.map((i) => String(i.id)));
+    const remainingFallback = fallbackIdeas.filter((f) => !mongoIds.has(String(f.id)));
+    const combined = [...mongoIdeas, ...remainingFallback];
+
+    return res.status(200).json({ success: true, count: combined.length, data: combined });
   }
 
   if (req.method === 'POST') {
