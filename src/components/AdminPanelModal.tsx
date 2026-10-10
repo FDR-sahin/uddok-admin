@@ -92,8 +92,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const handleSourcingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sTitle || !sWholesalePrice || !sRetailPrice || !sExactLocation) {
-      alert('দয়া করে শিরোনাম, পাইকারি দাম, খুচরা দাম এবং নির্দিষ্ট লোকেশন পূরণ করুন।');
+    if (!sTitle || !sExactLocation) {
+      alert('দয়া করে শিরোনাম এবং নির্দিষ্ট সোর্সিং ঠিকানা পূরণ করুন।');
       return;
     }
 
@@ -372,12 +372,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     {/* Wholesale Price Range */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700">
-                        পাইকারি দামের রেঞ্জ (Wholesale Price Range / ৳) *
+                        পাইকারি দামের রেঞ্জ (Wholesale Price Range / ৳ - অপশনাল)
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         <input
                           type="text"
-                          required
                           value={sWholesalePrice}
                           onChange={(e) => setSWholesalePrice(e.target.value)}
                           placeholder="দাম বা রেঞ্জ (যেমন: 100-3000)"
@@ -396,12 +395,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     {/* Retail / Selling Price Range */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700">
-                        খুচরা বিক্রয়মূল্যের রেঞ্জ (Retail Price Range / ৳) *
+                        খুচরা বিক্রয়মূল্যের রেঞ্জ (Retail Price Range / ৳ - অপশনাল)
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         <input
                           type="text"
-                          required
                           value={sRetailPrice}
                           onChange={(e) => setSRetailPrice(e.target.value)}
                           placeholder="দাম বা রেঞ্জ (যেমন: 150-3500)"

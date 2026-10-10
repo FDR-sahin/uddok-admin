@@ -106,8 +106,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleIdeaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !category || !district || !exactLocation || !wholesalePrice || !retailPrice) {
-      alert('সবগুলো আবশ্যক ফিল্ড পূরণ করুন।');
+    if (!title || !category || !district || !exactLocation) {
+      alert('দয়া করে শিরোনাম, ক্যাটাগরি, জেলা এবং নির্দিষ্ট লোকেশন পূরণ করুন।');
       return;
     }
 
@@ -399,12 +399,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Wholesale Range */}
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 text-xs">
-                    পাইকারি দামের রেঞ্জ (Wholesale Range / ৳) *
+                    পাইকারি দামের রেঞ্জ (Wholesale Range / ৳ - অপশনাল)
                   </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      required
                       value={wholesalePrice}
                       onChange={(e) => setWholesalePrice(e.target.value)}
                       placeholder="দাম বা রেঞ্জ (যেমন: 100-3000 বা 100)"
@@ -424,12 +423,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Retail Range */}
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700 text-xs">
-                    খুচরা বিক্রয়মূল্য রেঞ্জ (Retail Range / ৳) *
+                    খুচরা বিক্রয়মূল্য রেঞ্জ (Retail Range / ৳ - অপশনাল)
                   </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      required
                       value={retailPrice}
                       onChange={(e) => setRetailPrice(e.target.value)}
                       placeholder="দাম বা রেঞ্জ (যেমন: 150-3500 বা 150)"
