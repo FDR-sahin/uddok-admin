@@ -23,12 +23,16 @@ const CommentSchema = new mongoose.Schema({
 });
 
 const BusinessIdeaSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  category: { type: String, required: true },
-  district: { type: String, required: true },
-  exactLocation: { type: String, required: true },
-  wholesalePrice: { type: Number, required: true },
-  retailPrice: { type: Number, required: true },
+  title: { type: String, default: 'নতুন বিজনেস সোর্সিং আইডিয়া' },
+  category: { type: String, default: 'সাধারণ' },
+  district: { type: String, default: 'ঢাকা' },
+  exactLocation: { type: String, default: 'ঢাকা, বাংলাদেশ' },
+  wholesalePrice: { type: Number, default: 0 },
+  wholesalePriceMax: { type: Number },
+  wholesalePriceText: { type: String },
+  retailPrice: { type: Number, default: 0 },
+  retailPriceMax: { type: Number },
+  retailPriceText: { type: String },
   unit: { type: String, default: 'প্রতি পিস' },
   moq: { type: String, default: '১০ পিস' },
   description: { type: String, default: '' },
@@ -169,12 +173,16 @@ app.get('/api/ideas', async (req, res) => {
 app.post('/api/ideas', async (req, res) => {
   try {
     const {
-      title,
-      category,
-      district,
-      exactLocation,
-      wholesalePrice,
-      retailPrice,
+      title = 'নতুন বিজনেস সোর্সিং আইডিয়া',
+      category = 'সাধারণ',
+      district = 'ঢাকা',
+      exactLocation = `${req.body.district || 'ঢাকা'}, বাংলাদেশ`,
+      wholesalePrice = 0,
+      wholesalePriceMax,
+      wholesalePriceText,
+      retailPrice = 0,
+      retailPriceMax,
+      retailPriceText,
       unit = 'প্রতি পিস',
       moq = '১০ পিস',
       description = '',
@@ -182,18 +190,27 @@ app.post('/api/ideas', async (req, res) => {
       coordinates = { lat: 23.8583, lng: 90.2667 }
     } = req.body;
 
-    if (!title || !category || !district || !exactLocation || !wholesalePrice || !retailPrice) {
-      return res.status(400).json({ success: false, message: 'All required fields must be provided' });
-    }
+    const wMin = Number(wholesalePrice || 0);
+    const wMax = wholesalePriceMax !== undefined && wholesalePriceMax !== null && String(wholesalePriceMax).trim() !== ''
+      ? Number(wholesalePriceMax)
+      : undefined;
+    const rMin = Number(retailPrice || 0);
+    const rMax = retailPriceMax !== undefined && retailPriceMax !== null && String(retailPriceMax).trim() !== ''
+      ? Number(retailPriceMax)
+      : undefined;
 
     if (isMongoConnected) {
       const newIdea = await IdeaModel.create({
-        title,
-        category,
-        district,
-        exactLocation,
-        wholesalePrice: Number(wholesalePrice),
-        retailPrice: Number(retailPrice),
+        title: title || 'নতুন বিজনেস সোর্সিং আইডিয়া',
+        category: category || 'সাধারণ',
+        district: district || 'ঢাকা',
+        exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
+        wholesalePrice: wMin,
+        wholesalePriceMax: wMax,
+        wholesalePriceText: wholesalePriceText || (wMax ? `${wMin}-${wMax}` : String(wMin)),
+        retailPrice: rMin,
+        retailPriceMax: rMax,
+        retailPriceText: retailPriceText || (rMax ? `${rMin}-${rMax}` : String(rMin)),
         unit,
         moq,
         description,
@@ -206,13 +223,17 @@ app.post('/api/ideas', async (req, res) => {
 
     const memoryItem: any = {
       id: `sourcing-${Date.now()}`,
-      title,
-      category,
-      district,
+      title: title || 'নতুন বিজনেস সোর্সিং আইডিয়া',
+      category: category || 'সাধারণ',
+      district: district || 'ঢাকা',
       upazilaOrArea: district,
-      exactLocation,
-      wholesalePrice: Number(wholesalePrice),
-      retailPrice: Number(retailPrice),
+      exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
+      wholesalePrice: wMin,
+      wholesalePriceMax: wMax,
+      wholesalePriceText: wholesalePriceText || (wMax ? `${wMin}-${wMax}` : String(wMin)),
+      retailPrice: rMin,
+      retailPriceMax: rMax,
+      retailPriceText: retailPriceText || (rMax ? `${rMin}-${rMax}` : String(rMin)),
       unit,
       moq,
       description,
@@ -221,7 +242,7 @@ app.post('/api/ideas', async (req, res) => {
       isVerified: true,
       verificationBadgeText: 'ভেরিফায়েড প্রজেক্ট',
       lastUpdated: new Date().toLocaleDateString('bn-BD'),
-      tags: [`#${district}`, `#${category}`],
+      tags: [`#${district || 'ঢাকা'}`, `#${category || 'সোর্সিং'}`],
       likes: 0,
       dislikes: 0,
       comments: []
@@ -234,9 +255,10 @@ app.post('/api/ideas', async (req, res) => {
 });
 
 // PUT update idea (Admin)
-app.put('/api/ideas/:id', async (req, res) => {
+const handleUpdateIdeaHandler = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || req.query?.id || req.body?.id || req.body?._id;
+    if (!id) return res.status(400).json({ success: false, message: 'ID is required' });
     const updates = req.body;
 
     if (isMongoConnected) {
@@ -254,12 +276,15 @@ app.put('/api/ideas/:id', async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
-});
+};
+app.put('/api/ideas/:id', handleUpdateIdeaHandler);
+app.put('/api/ideas', handleUpdateIdeaHandler);
 
 // DELETE idea (Admin)
-app.delete('/api/ideas/:id', async (req, res) => {
+const handleDeleteIdeaHandler = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || req.query?.id;
+    if (!id) return res.status(400).json({ success: false, message: 'ID is required' });
     if (isMongoConnected) {
       await IdeaModel.findByIdAndDelete(id);
     }
@@ -268,7 +293,9 @@ app.delete('/api/ideas/:id', async (req, res) => {
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
-});
+};
+app.delete('/api/ideas/:id', handleDeleteIdeaHandler);
+app.delete('/api/ideas', handleDeleteIdeaHandler);
 
 // POST comment to an idea
 app.post('/api/ideas/:id/comments', async (req, res) => {

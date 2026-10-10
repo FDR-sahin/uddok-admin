@@ -40,8 +40,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteBlog
 }) => {
   // Login form state
-  const [email, setEmail] = useState('admin@uddokta.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
@@ -106,24 +106,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleIdeaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !category || !district || !exactLocation) {
-      alert('দয়া করে শিরোনাম, ক্যাটাগরি, জেলা এবং নির্দিষ্ট লোকেশন পূরণ করুন।');
-      return;
-    }
 
     const wRange = parseRangeValue(wholesalePrice, wholesalePriceMax);
     const rRange = parseRangeValue(retailPrice, retailPriceMax);
 
     setIdeaSubmitting(true);
     await onAddIdea({
-      title,
-      category,
-      district,
-      exactLocation,
+      title: title || 'নতুন বিজনেস সোর্সিং আইডিয়া',
+      category: category || 'সাধারণ',
+      district: district || 'ঢাকা',
+      exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
       wholesalePrice: wRange.min,
       wholesalePriceMax: wRange.max,
+      wholesalePriceText: wholesalePrice.trim() || undefined,
       retailPrice: rRange.min,
       retailPriceMax: rRange.max,
+      retailPriceText: retailPrice.trim() || undefined,
       description: description || `${district} এলাকার পাইকারি সোর্সিং ও খুচরা বিক্রয় সুযোগ।`,
       unit: 'প্রতি পিস',
       moq: '১০ পিস',
@@ -197,7 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@uddokta.com"
+                placeholder="অ্যাডমিন ইমেইল লিখুন"
                 className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
               />
             </div>
@@ -212,7 +210,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="password123"
+                placeholder="অ্যাডমিন পাসওয়ার্ড লিখুন"
                 className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
               />
             </div>
@@ -231,10 +229,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {loggingIn ? 'যাচাই করা হচ্ছে...' : 'লগইন করুন'}
             </button>
           </form>
-
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 text-center">
-            ডিফল্ট ডেমো লগইন: <strong>admin@uddokta.com</strong> / <strong>password123</strong>
-          </div>
         </div>
       </div>
     );

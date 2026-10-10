@@ -20,7 +20,11 @@ export interface SourcingIdea {
     lng: number;
   };
   wholesalePrice: number;
+  wholesalePriceMax?: number;
+  wholesalePriceText?: string;
   retailPrice: number;
+  retailPriceMax?: number;
+  retailPriceText?: string;
   unit: string;
   moq: string;
   isVerified: boolean;

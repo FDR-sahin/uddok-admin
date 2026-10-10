@@ -92,11 +92,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   const handleSourcingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sTitle || !sExactLocation) {
-      alert('দয়া করে শিরোনাম এবং নির্দিষ্ট সোর্সিং ঠিকানা পূরণ করুন।');
-      return;
-    }
-
     const wRange = parseRangeValue(sWholesalePrice, sWholesalePriceMax);
     const rRange = parseRangeValue(sRetailPrice, sRetailPriceMax);
 
@@ -112,8 +107,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       },
       wholesalePrice: wRange.min,
       wholesalePriceMax: wRange.max,
+      wholesalePriceText: sWholesalePrice.trim() || undefined,
       retailPrice: rRange.min,
       retailPriceMax: rRange.max,
+      retailPriceText: sRetailPrice.trim() || undefined,
       unit: sUnit,
       moq: sMoq,
       isVerified: sIsVerified,
@@ -227,7 +224,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               অ্যাডমিন এক্সেস প্রয়োজন
             </h3>
             <p className="text-xs text-slate-500">
-              সোর্সিং তথ্য ও ব্লগ সরাসরি ওয়েবসাইট থেকে আপলোড বা এডিট করার জন্য অ্যাডমিন হিসেবে প্রবেশ করুন। (ডেমো পাসওয়ার্ড: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">admin123</code> অথবা সরাসরি "প্রবেশ করুন" বাটনে চাপুন)
+              সোর্সিং তথ্য ও ব্লগ সরাসরি ওয়েবসাইট থেকে আপলোড বা এডিট করার জন্য অ্যাডমিন হিসেবে প্রবেশ করুন।
             </p>
 
             <form onSubmit={handleAdminLogin} className="space-y-3 pt-2">
@@ -235,10 +232,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 type="password"
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
-                placeholder="পাসকোড লিখুন (ডিফল্ট: admin123)"
+                placeholder="অ্যাডমিন পাসকোড লিখুন"
                 className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-emerald-500 outline-none"
               />
-              {authError && <p className="text-xs text-rose-500 font-medium">{authError}</p>}
+              {authError && <p className="text-xs text-rose-500 font-medium">ভুল পাসকোড! দয়া করে সঠিক পাসকোড দিয়ে প্রবেশ করুন।</p>}
               <button
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer"

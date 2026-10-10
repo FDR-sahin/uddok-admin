@@ -25,6 +25,35 @@ import { BlogPost, SourcingIdea } from './types';
 import { initialBlogPosts } from './data/blogsData';
 import { initialSourcingIdeas } from './data/sourcingData';
 
+const parseRangeValue = (val: string | number | undefined, maxVal?: string | number | undefined) => {
+  let min: number = 0;
+  let max: number | undefined = undefined;
+
+  const s = String(val ?? '').trim();
+  if (s.includes('-')) {
+    const parts = s.split('-').map((p) => parseFloat(p.replace(/[^\d.]/g, '')));
+    if (!isNaN(parts[0])) min = parts[0];
+    if (parts.length > 1 && !isNaN(parts[1])) max = parts[1];
+  } else {
+    const n = parseFloat(s.replace(/[^\d.]/g, ''));
+    if (!isNaN(n)) min = n;
+  }
+
+  if (maxVal !== undefined && maxVal !== null && String(maxVal).trim()) {
+    const mn = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+    if (!isNaN(mn)) max = mn;
+  }
+
+  return { min, max };
+};
+
+const formatPriceRange = (min?: number, max?: number, fallbackText?: string) => {
+  if (fallbackText && fallbackText.trim()) return fallbackText;
+  if (!min && !max) return '০';
+  if (min && max && min !== max) return `৳ ${min} - ${max}`;
+  return `৳ ${min || max || 0}`;
+};
+
 export default function App() {
   // Authentication State
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
@@ -49,8 +78,10 @@ export default function App() {
   const [ideaCategory, setIdeaCategory] = useState('পোশাক');
   const [ideaDistrict, setIdeaDistrict] = useState('ঢাকা');
   const [ideaLocation, setIdeaLocation] = useState('');
-  const [ideaWholesale, setIdeaWholesale] = useState<number | ''>('');
-  const [ideaRetail, setIdeaRetail] = useState<number | ''>('');
+  const [ideaWholesale, setIdeaWholesale] = useState<string>('');
+  const [ideaWholesaleMax, setIdeaWholesaleMax] = useState<string>('');
+  const [ideaRetail, setIdeaRetail] = useState<string>('');
+  const [ideaRetailMax, setIdeaRetailMax] = useState<string>('');
   const [ideaDesc, setIdeaDesc] = useState('');
   const [submittingIdea, setSubmittingIdea] = useState(false);
 
@@ -158,20 +189,23 @@ export default function App() {
   // 1. Post Idea
   const handlePostIdea = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ideaTitle || !ideaCategory || !ideaDistrict || !ideaLocation || !ideaWholesale || !ideaRetail) {
-      alert('দয়া করে সব আবশ্যক তথ্য পূরণ করুন।');
-      return;
-    }
+
+    const wRange = parseRangeValue(ideaWholesale, ideaWholesaleMax);
+    const rRange = parseRangeValue(ideaRetail, ideaRetailMax);
 
     setSubmittingIdea(true);
     const newPayload = {
-      title: ideaTitle,
-      category: ideaCategory,
-      district: ideaDistrict,
-      exactLocation: ideaLocation,
-      wholesalePrice: Number(ideaWholesale),
-      retailPrice: Number(ideaRetail),
-      description: ideaDesc || `${ideaDistrict}-এ ${ideaCategory} পাইকারি সোর্সিং ও খুচরা বিক্রয় সুবিধা।`,
+      title: ideaTitle.trim() || 'নতুন বিজনেস সোর্সিং আইডিয়া',
+      category: ideaCategory.trim() || 'সাধারণ',
+      district: ideaDistrict.trim() || 'ঢাকা',
+      exactLocation: ideaLocation.trim() || `${ideaDistrict.trim() || 'ঢাকা'}, বাংলাদেশ`,
+      wholesalePrice: wRange.min,
+      wholesalePriceMax: wRange.max,
+      wholesalePriceText: ideaWholesale.trim() || (wRange.max ? `${wRange.min}-${wRange.max}` : undefined),
+      retailPrice: rRange.min,
+      retailPriceMax: rRange.max,
+      retailPriceText: ideaRetail.trim() || (rRange.max ? `${rRange.min}-${rRange.max}` : undefined),
+      description: ideaDesc || `${ideaDistrict || 'ঢাকা'}-এ ${ideaCategory || 'পণ্য'} পাইকারি সোর্সিং ও খুচরা বিক্রয় সুবিধা।`,
       unit: 'প্রতি পিস',
       moq: '১০ পিস',
       isVerified: true
@@ -190,7 +224,9 @@ export default function App() {
         setIdeaTitle('');
         setIdeaLocation('');
         setIdeaWholesale('');
+        setIdeaWholesaleMax('');
         setIdeaRetail('');
+        setIdeaRetailMax('');
         setIdeaDesc('');
         showToast('নতুন বিজনেস আইডিয়া কার্ড সফলভাবে পোস্ট হয়েছে!');
         return;
@@ -207,7 +243,7 @@ export default function App() {
       coordinates: { lat: 23.8583, lng: 90.2667 },
       verificationBadgeText: 'ভেরিফায়েড প্রজেক্ট',
       lastUpdated: new Date().toLocaleDateString('bn-BD'),
-      tags: [`#${ideaDistrict}`, `#${ideaCategory}`],
+      tags: [`#${ideaDistrict || 'ঢাকা'}`, `#${ideaCategory || 'সোর্সিং'}`],
       likes: 0,
       dislikes: 0,
       comments: []
@@ -217,7 +253,9 @@ export default function App() {
     setIdeaTitle('');
     setIdeaLocation('');
     setIdeaWholesale('');
+    setIdeaWholesaleMax('');
     setIdeaRetail('');
+    setIdeaRetailMax('');
     setIdeaDesc('');
     showToast('নতুন বিজনেস আইডিয়া কার্ড সফলভাবে পোস্ট হয়েছে!');
   };
@@ -228,17 +266,30 @@ export default function App() {
     if (!editingIdea) return;
     const id = editingIdea._id || editingIdea.id;
 
+    const wRange = parseRangeValue(editingIdea.wholesalePrice, editingIdea.wholesalePriceMax);
+    const rRange = parseRangeValue(editingIdea.retailPrice, editingIdea.retailPriceMax);
+
+    const updatedIdea = {
+      ...editingIdea,
+      wholesalePrice: wRange.min,
+      wholesalePriceMax: wRange.max,
+      wholesalePriceText: editingIdea.wholesalePriceText || (wRange.max ? `${wRange.min}-${wRange.max}` : String(wRange.min)),
+      retailPrice: rRange.min,
+      retailPriceMax: rRange.max,
+      retailPriceText: editingIdea.retailPriceText || (rRange.max ? `${rRange.min}-${rRange.max}` : String(rRange.min)),
+    };
+
     try {
       await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingIdea)
+        body: JSON.stringify(updatedIdea)
       });
     } catch (err) {
       console.error(err);
     }
 
-    setIdeas((prev) => prev.map((item: any) => ((String(item._id) === String(id) || String(item.id) === String(id)) ? editingIdea : item)));
+    setIdeas((prev) => prev.map((item: any) => ((String(item._id) === String(id) || String(item.id) === String(id)) ? updatedIdea : item)));
     setEditingIdea(null);
     showToast('কার্ডের তথ্য সফলভাবে আপডেট করা হয়েছে!');
   };
@@ -536,11 +587,10 @@ export default function App() {
                 {/* Title */}
                 <div className="space-y-1">
                   <label className="font-bold text-slate-800">
-                    কার্ডের শিরোনাম (Title) *
+                    কার্ডের শিরোনাম (Title)
                   </label>
                   <input
                     type="text"
-                    required
                     value={ideaTitle}
                     onChange={(e) => setIdeaTitle(e.target.value)}
                     placeholder="যেমন: Savar-এ MILK পাইকারি সোর্সিং"
@@ -552,11 +602,10 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="font-bold text-slate-800">
-                      ক্যাটাগরি (Category) *
+                      ক্যাটাগরি (Category)
                     </label>
                     <input
                       type="text"
-                      required
                       value={ideaCategory}
                       onChange={(e) => setIdeaCategory(e.target.value)}
                       placeholder="যেমন: খাবার ও দুগ্ধ, পোশাক (Cloth), কৃষি ইত্যাদি"
@@ -566,11 +615,10 @@ export default function App() {
 
                   <div className="space-y-1">
                     <label className="font-bold text-slate-800">
-                      জেলা (Jela / District) *
+                      জেলা (Jela / District)
                     </label>
                     <input
                       type="text"
-                      required
                       value={ideaDistrict}
                       onChange={(e) => setIdeaDistrict(e.target.value)}
                       placeholder="যেমন: ঢাকা, সাভার, বগুড়া, নরসিংদী"
@@ -582,11 +630,10 @@ export default function App() {
                 {/* Exact Location */}
                 <div className="space-y-1">
                   <label className="font-bold text-slate-800">
-                    নির্দিষ্ট সোর্সিং ঠিকানা বা বাজার (Exact Location) *
+                    নির্দিষ্ট সোর্সিং ঠিকানা বা বাজার (Exact Location)
                   </label>
                   <input
                     type="text"
-                    required
                     value={ideaLocation}
                     onChange={(e) => setIdeaLocation(e.target.value)}
                     placeholder="যেমন: সাভার পৌরসভা রোড, বংশী নদীর ঘাট সংলগ্ন দুগ্ধ আড়ত, সাভার, ঢাকা"
@@ -594,34 +641,92 @@ export default function App() {
                   />
                 </div>
 
-                {/* Wholesale & Retail Price */}
+                {/* Wholesale & Retail Price Range: 2 Separate Boxes */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-800">
-                      পাইকারি দাম (Pikari Price / ৳) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={ideaWholesale}
-                      onChange={(e) => setIdeaWholesale(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="৬৫"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                    />
+                  {/* Box 1: Wholesale Price Range */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5 text-xs sm:text-sm">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                        পাইকারি দাম (Wholesale)
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-semibold">
+                        রেঞ্জ
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-slate-600">শুরু / থেকে (৳)</label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">৳</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ideaWholesale}
+                            onChange={(e) => setIdeaWholesale(e.target.value)}
+                            placeholder="যেমন: ৪৫"
+                            className="w-full pl-7 pr-2.5 py-2 rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none font-mono text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-slate-600">পর্যন্ত (সর্বোচ্চ)</label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">৳</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ideaWholesaleMax}
+                            onChange={(e) => setIdeaWholesaleMax(e.target.value)}
+                            placeholder="যেমন: ৫২"
+                            className="w-full pl-7 pr-2.5 py-2 rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none font-mono text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-800">
-                      খুচরা দাম (Khusra / Retail Price / ৳) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={ideaRetail}
-                      onChange={(e) => setIdeaRetail(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="১০০"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                    />
+                  {/* Box 2: Retail Price Range */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5 text-xs sm:text-sm">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        খুচরা দাম (Retail)
+                      </span>
+                      <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-semibold">
+                        রেঞ্জ
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-slate-600">শুরু / থেকে (৳)</label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">৳</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ideaRetail}
+                            onChange={(e) => setIdeaRetail(e.target.value)}
+                            placeholder="যেমন: ১০০"
+                            className="w-full pl-7 pr-2.5 py-2 rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none font-mono text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-slate-600">পর্যন্ত (সর্বোচ্চ)</label>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">৳</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ideaRetailMax}
+                            onChange={(e) => setIdeaRetailMax(e.target.value)}
+                            placeholder="যেমন: ১২০"
+                            className="w-full pl-7 pr-2.5 py-2 rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none font-mono text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -698,15 +803,21 @@ export default function App() {
                         <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 grid grid-cols-3 gap-1 text-center text-xs">
                           <div>
                             <span className="text-[10px] text-slate-400 block">পাইকারি</span>
-                            <span className="font-bold text-slate-900 block">৳ {item.wholesalePrice}</span>
+                            <span className="font-bold text-slate-900 block truncate" title={formatPriceRange(item.wholesalePrice, item.wholesalePriceMax, item.wholesalePriceText)}>
+                              {formatPriceRange(item.wholesalePrice, item.wholesalePriceMax, item.wholesalePriceText)}
+                            </span>
                           </div>
                           <div className="border-x border-slate-200">
                             <span className="text-[10px] text-slate-400 block">খুচরা</span>
-                            <span className="font-bold text-slate-900 block">৳ {item.retailPrice}</span>
+                            <span className="font-bold text-slate-900 block truncate" title={formatPriceRange(item.retailPrice, item.retailPriceMax, item.retailPriceText)}>
+                              {formatPriceRange(item.retailPrice, item.retailPriceMax, item.retailPriceText)}
+                            </span>
                           </div>
                           <div>
                             <span className="text-[10px] text-emerald-700 font-bold block">লাভ</span>
-                            <span className="font-extrabold text-emerald-700 block">+৳ {profit}</span>
+                            <span className="font-extrabold text-emerald-700 block truncate">
+                              +৳ {Math.max(0, (Number(item.retailPrice) || 0) - (Number(item.wholesalePrice) || 0))}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -987,23 +1098,23 @@ export default function App() {
                 <h3 className="text-sm font-bold text-slate-800">দাম ও লাভ</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-                    <span className="text-xs font-semibold text-slate-500 block mb-1">পাইকারি দাম</span>
-                    <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                      ৳ {selectedIdeaPreview.wholesalePrice}
+                    <span className="text-xs font-semibold text-slate-500 block mb-1">পাইকারি দাম রেঞ্জ</span>
+                    <div className="text-xl sm:text-2xl font-extrabold text-slate-900">
+                      {formatPriceRange(selectedIdeaPreview.wholesalePrice, selectedIdeaPreview.wholesalePriceMax, selectedIdeaPreview.wholesalePriceText)}
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
-                    <span className="text-xs font-semibold text-slate-500 block mb-1">খুচরা দাম</span>
-                    <div className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                      ৳ {selectedIdeaPreview.retailPrice}
+                    <span className="text-xs font-semibold text-slate-500 block mb-1">খুচরা দাম রেঞ্জ</span>
+                    <div className="text-xl sm:text-2xl font-extrabold text-slate-900">
+                      {formatPriceRange(selectedIdeaPreview.retailPrice, selectedIdeaPreview.retailPriceMax, selectedIdeaPreview.retailPriceText)}
                     </div>
                   </div>
 
                   <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 shadow-xs">
-                    <span className="text-xs font-semibold text-emerald-800 block mb-1">প্রফিট / লাভ</span>
-                    <div className="text-2xl sm:text-3xl font-extrabold text-emerald-700">
-                      ৳ {selectedIdeaPreview.retailPrice - selectedIdeaPreview.wholesalePrice}
+                    <span className="text-xs font-semibold text-emerald-800 block mb-1">প্রফিট / মার্জিন</span>
+                    <div className="text-xl sm:text-2xl font-extrabold text-emerald-700">
+                      ৳ {Math.max(0, (Number(selectedIdeaPreview.retailPrice) || 0) - (Number(selectedIdeaPreview.wholesalePrice) || 0))}
                     </div>
                   </div>
                 </div>
@@ -1120,8 +1231,7 @@ export default function App() {
                 <label className="font-bold text-slate-700 block mb-1">শিরোনাম</label>
                 <input
                   type="text"
-                  required
-                  value={editingIdea.title}
+                  value={editingIdea.title || ''}
                   onChange={(e) => setEditingIdea({ ...editingIdea, title: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200"
                 />
@@ -1132,8 +1242,7 @@ export default function App() {
                   <label className="font-bold text-slate-700 block mb-1">ক্যাটাগরি</label>
                   <input
                     type="text"
-                    required
-                    value={editingIdea.category}
+                    value={editingIdea.category || ''}
                     onChange={(e) => setEditingIdea({ ...editingIdea, category: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200"
                   />
@@ -1143,8 +1252,7 @@ export default function App() {
                   <label className="font-bold text-slate-700 block mb-1">জেলা</label>
                   <input
                     type="text"
-                    required
-                    value={editingIdea.district}
+                    value={editingIdea.district || ''}
                     onChange={(e) => setEditingIdea({ ...editingIdea, district: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200"
                   />
@@ -1155,34 +1263,70 @@ export default function App() {
                 <label className="font-bold text-slate-700 block mb-1">নির্দিষ্ট সোর্সিং ঠিকানা</label>
                 <input
                   type="text"
-                  required
-                  value={editingIdea.exactLocation}
+                  value={editingIdea.exactLocation || ''}
                   onChange={(e) => setEditingIdea({ ...editingIdea, exactLocation: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">পাইকারি দাম (৳)</label>
-                  <input
-                    type="number"
-                    required
-                    value={editingIdea.wholesalePrice}
-                    onChange={(e) => setEditingIdea({ ...editingIdea, wholesalePrice: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                  />
+              {/* 2 Range Boxes in Edit Modal */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="font-bold text-slate-800 text-xs">পাইকারি দাম (Wholesale)</span>
+                    <span className="text-[10px] font-mono text-emerald-700">রেঞ্জ</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">শুরু / থেকে (৳)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editingIdea.wholesalePrice ?? ''}
+                        onChange={(e) => setEditingIdea({ ...editingIdea, wholesalePrice: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">পর্যন্ত (সর্বোচ্চ)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editingIdea.wholesalePriceMax ?? ''}
+                        onChange={(e) => setEditingIdea({ ...editingIdea, wholesalePriceMax: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">খুচরা দাম (৳)</label>
-                  <input
-                    type="number"
-                    required
-                    value={editingIdea.retailPrice}
-                    onChange={(e) => setEditingIdea({ ...editingIdea, retailPrice: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200"
-                  />
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="font-bold text-slate-800 text-xs">খুচরা দাম (Retail)</span>
+                    <span className="text-[10px] font-mono text-amber-700">রেঞ্জ</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">শুরু / থেকে (৳)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editingIdea.retailPrice ?? ''}
+                        onChange={(e) => setEditingIdea({ ...editingIdea, retailPrice: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 block mb-0.5">পর্যন্ত (সর্বোচ্চ)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editingIdea.retailPriceMax ?? ''}
+                        onChange={(e) => setEditingIdea({ ...editingIdea, retailPriceMax: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

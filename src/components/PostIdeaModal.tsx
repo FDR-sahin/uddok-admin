@@ -13,8 +13,10 @@ export const PostIdeaModal: React.FC<PostIdeaModalProps> = ({ isOpen, onClose, o
   const [district, setDistrict] = useState('ঢাকা');
   const [upazila, setUpazila] = useState('');
   const [exactLocation, setExactLocation] = useState('');
-  const [wholesalePrice, setWholesalePrice] = useState<number | ''>('');
-  const [retailPrice, setRetailPrice] = useState<number | ''>('');
+  const [wholesalePrice, setWholesalePrice] = useState<string>('');
+  const [wholesalePriceMax, setWholesalePriceMax] = useState<string>('');
+  const [retailPrice, setRetailPrice] = useState<string>('');
+  const [retailPriceMax, setRetailPriceMax] = useState<string>('');
   const [unit, setUnit] = useState('প্রতি পিস');
   const [moq, setMoq] = useState('১০ পিস');
   const [description, setDescription] = useState('');
@@ -25,23 +27,28 @@ export const PostIdeaModal: React.FC<PostIdeaModalProps> = ({ isOpen, onClose, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !wholesalePrice || !retailPrice || !exactLocation) {
-      alert('দয়া করে শিরোনাম, নির্দিষ্ট ঠিকানা, পাইকারি দাম ও বিক্রয়মূল্য লিখুন।');
-      return;
-    }
+
+    const wMin = parseFloat(wholesalePrice.replace(/[^\d.]/g, '')) || 0;
+    const wMax = wholesalePriceMax ? parseFloat(wholesalePriceMax.replace(/[^\d.]/g, '')) : undefined;
+    const rMin = parseFloat(retailPrice.replace(/[^\d.]/g, '')) || 0;
+    const rMax = retailPriceMax ? parseFloat(retailPriceMax.replace(/[^\d.]/g, '')) : undefined;
 
     onSubmit({
-      title,
-      category,
-      district,
-      upazilaOrArea: upazila || district,
-      exactLocation,
+      title: title || 'নতুন বিজনেস সোর্সিং আইডিয়া',
+      category: category || 'সাধারণ',
+      district: district || 'ঢাকা',
+      upazilaOrArea: upazila || district || 'ঢাকা',
+      exactLocation: exactLocation || `${district || 'ঢাকা'}, বাংলাদেশ`,
       coordinates: {
         lat: 23.8103,
         lng: 90.4125
       },
-      wholesalePrice: Number(wholesalePrice),
-      retailPrice: Number(retailPrice),
+      wholesalePrice: wMin,
+      wholesalePriceMax: wMax,
+      wholesalePriceText: wholesalePrice.trim() || undefined,
+      retailPrice: rMin,
+      retailPriceMax: rMax,
+      retailPriceText: retailPrice.trim() || undefined,
       unit,
       moq,
       isVerified: false,
@@ -151,7 +158,6 @@ export const PostIdeaModal: React.FC<PostIdeaModalProps> = ({ isOpen, onClose, o
             <label className="font-bold text-slate-700">নির্দিষ্ট সোর্সিং ঠিকানা বা বাজারের নাম (Exact Location) *</label>
             <input
               type="text"
-              required
               value={exactLocation}
               onChange={(e) => setExactLocation(e.target.value)}
               placeholder="যেমন: সাভার পৌরসভা রোড, বংশী নদীর ঘাট সংলগ্ন খামারি সমিতি আড়ত"
@@ -159,31 +165,53 @@ export const PostIdeaModal: React.FC<PostIdeaModalProps> = ({ isOpen, onClose, o
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700">পাইকারি দাম (৳) *</label>
-              <input
-                type="number"
-                required
-                value={wholesalePrice}
-                onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : '')}
-                placeholder="৬৫"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200"
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <label className="font-bold text-slate-700 text-xs">পাইকারি দামের রেঞ্জ (৳)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={wholesalePrice}
+                  onChange={(e) => setWholesalePrice(e.target.value)}
+                  placeholder="শুরু (যেমন: ৪৫)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={wholesalePriceMax}
+                  onChange={(e) => setWholesalePriceMax(e.target.value)}
+                  placeholder="সর্বোচ্চ (যেমন: ৫২)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700">খুচরা দাম (৳) *</label>
-              <input
-                type="number"
-                required
-                value={retailPrice}
-                onChange={(e) => setRetailPrice(e.target.value ? Number(e.target.value) : '')}
-                placeholder="১০০"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200"
-              />
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+              <label className="font-bold text-slate-700 text-xs">খুচরা বিক্রয়মূল্য রেঞ্জ (৳)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={retailPrice}
+                  onChange={(e) => setRetailPrice(e.target.value)}
+                  placeholder="শুরু (যেমন: ১০০)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={retailPriceMax}
+                  onChange={(e) => setRetailPriceMax(e.target.value)}
+                  placeholder="সর্বোচ্চ (যেমন: ১২০)"
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono"
+                />
+              </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-2.5">
             <div className="space-y-1">
               <label className="font-bold text-slate-700">পরিমাপের ইউনিট</label>
               <input
