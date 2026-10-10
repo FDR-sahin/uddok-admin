@@ -14,13 +14,12 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     if (MONGODB_URI) {
-      let client: MongoClient | null = null;
       try {
-        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
         await client.connect();
         const db = client.db('uddokta_db');
         const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
-        await client.close().catch(() => {});
+        await client.close();
 
         if (ideas && Array.isArray(ideas) && ideas.length > 0) {
           const clean = ideas.map((i: any) => ({
@@ -46,7 +45,7 @@ export default async function handler(req: any, res: any) {
           return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
       } catch (err: any) {
-        if (client) await client.close().catch(() => {});
+        console.log('MongoDB Atlas ideas fetch error:', err.message);
       }
     }
     return res.status(200).json({ success: true, count: initialSourcingIdeas.length, data: initialSourcingIdeas });
@@ -92,16 +91,15 @@ export default async function handler(req: any, res: any) {
       };
 
       if (MONGODB_URI) {
-        let client: MongoClient | null = null;
         try {
-          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          const client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
           await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('ideas').insertOne(newIdea);
-          await client.close().catch(() => {});
+          await client.close();
           return res.status(201).json({ success: true, data: { ...newIdea, _id: String(result.insertedId) } });
         } catch (err: any) {
-          if (client) await client.close().catch(() => {});
+          console.log('MongoDB Atlas insert idea error:', err.message);
         }
       }
 
