@@ -56,7 +56,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [sArea, setSArea] = useState('');
   const [sExactLocation, setSExactLocation] = useState('');
   const [sWholesalePrice, setSWholesalePrice] = useState<number | ''>('');
+  const [sWholesalePriceMax, setSWholesalePriceMax] = useState<number | ''>('');
   const [sRetailPrice, setSRetailPrice] = useState<number | ''>('');
+  const [sRetailPriceMax, setSRetailPriceMax] = useState<number | ''>('');
   const [sUnit, setSUnit] = useState('প্রতি পিস');
   const [sMoq, setSMoq] = useState('১০ পিস');
   const [sLat, setSLat] = useState<number>(23.8103);
@@ -116,7 +118,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         lng: Number(sLng) || 90.4125
       },
       wholesalePrice: Number(sWholesalePrice),
+      wholesalePriceMax: sWholesalePriceMax ? Number(sWholesalePriceMax) : undefined,
       retailPrice: Number(sRetailPrice),
+      retailPriceMax: sRetailPriceMax ? Number(sRetailPriceMax) : undefined,
       unit: sUnit,
       moq: sMoq,
       isVerified: sIsVerified,
@@ -136,7 +140,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     setSTitle('');
     setSExactLocation('');
     setSWholesalePrice('');
+    setSWholesalePriceMax('');
     setSRetailPrice('');
+    setSRetailPriceMax('');
     setSDescription('');
     setSSupplierTip('');
     setSuccessMsg('অভিনন্দন! নতুন পাইকারি সোর্সিং ও বিজনেস আইডিয়া সফলভাবে যুক্ত হয়েছে।');
@@ -370,34 +376,52 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       />
                     </div>
 
-                    {/* Wholesale Price */}
+                    {/* Wholesale Price Range */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700">
-                        পাইকারি দাম (Pikari Price / ৳) *
+                        পাইকারি দামের রেঞ্জ (Wholesale Price Range / ৳) *
                       </label>
-                      <input
-                        type="number"
-                        required
-                        value={sWholesalePrice}
-                        onChange={(e) => setSWholesalePrice(e.target.value ? Number(e.target.value) : '')}
-                        placeholder="যেমন: 65"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          required
+                          value={sWholesalePrice}
+                          onChange={(e) => setSWholesalePrice(e.target.value ? Number(e.target.value) : '')}
+                          placeholder="সর্বনিম্ন (যেমন: 65)"
+                          className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={sWholesalePriceMax}
+                          onChange={(e) => setSWholesalePriceMax(e.target.value ? Number(e.target.value) : '')}
+                          placeholder="সর্বোচ্চ (যেমন: 80)"
+                          className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                        />
+                      </div>
                     </div>
 
-                    {/* Retail / Selling Price */}
+                    {/* Retail / Selling Price Range */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-700">
-                        খুচরা বিক্রয়মূল্য (Selling Price / ৳) *
+                        খুচরা বিক্রয়মূল্যের রেঞ্জ (Retail Price Range / ৳) *
                       </label>
-                      <input
-                        type="number"
-                        required
-                        value={sRetailPrice}
-                        onChange={(e) => setSRetailPrice(e.target.value ? Number(e.target.value) : '')}
-                        placeholder="যেমন: 100"
-                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          required
+                          value={sRetailPrice}
+                          onChange={(e) => setSRetailPrice(e.target.value ? Number(e.target.value) : '')}
+                          placeholder="সর্বনিম্ন (যেমন: 100)"
+                          className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                        />
+                        <input
+                          type="number"
+                          value={sRetailPriceMax}
+                          onChange={(e) => setSRetailPriceMax(e.target.value ? Number(e.target.value) : '')}
+                          placeholder="সর্বোচ্চ (যেমন: 120)"
+                          className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                        />
+                      </div>
                     </div>
 
                     {/* Unit */}

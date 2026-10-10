@@ -54,7 +54,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [district, setDistrict] = useState('ঢাকা');
   const [exactLocation, setExactLocation] = useState('');
   const [wholesalePrice, setWholesalePrice] = useState<number | ''>('');
+  const [wholesalePriceMax, setWholesalePriceMax] = useState<number | ''>('');
   const [retailPrice, setRetailPrice] = useState<number | ''>('');
+  const [retailPriceMax, setRetailPriceMax] = useState<number | ''>('');
   const [description, setDescription] = useState('');
   const [ideaSubmitting, setIdeaSubmitting] = useState(false);
 
@@ -94,7 +96,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       district,
       exactLocation,
       wholesalePrice: Number(wholesalePrice),
+      wholesalePriceMax: wholesalePriceMax ? Number(wholesalePriceMax) : undefined,
       retailPrice: Number(retailPrice),
+      retailPriceMax: retailPriceMax ? Number(retailPriceMax) : undefined,
       description: description || `${district} এলাকার পাইকারি সোর্সিং ও খুচরা বিক্রয় সুযোগ।`,
       unit: 'প্রতি পিস',
       moq: '১০ পিস',
@@ -106,7 +110,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setTitle('');
     setExactLocation('');
     setWholesalePrice('');
+    setWholesalePriceMax('');
     setRetailPrice('');
+    setRetailPriceMax('');
     setDescription('');
     setNotification('সফলভাবে নতুন বিজনেস আইডিয়া কার্ড পোস্ট করা হয়েছে!');
     setTimeout(() => setNotification(''), 4000);
@@ -355,34 +361,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               />
             </div>
 
-            {/* Wholesale Price & Retail Price */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-800">
-                  পাইকারি দাম (Pikari Price / ৳) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={wholesalePrice}
-                  onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : '')}
-                  placeholder="৬৫"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                />
-              </div>
+            {/* Wholesale Price Range & Retail Price Range */}
+            <div className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <h3 className="font-bold text-slate-800 text-xs sm:text-sm flex items-center justify-between">
+                <span>পণ্য মূল্যরেঞ্জ (Price Range Setting)</span>
+                <span className="text-[11px] font-mono text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {wholesalePrice ? `৳${wholesalePrice}${wholesalePriceMax ? ' - ৳' + wholesalePriceMax : ''}` : 'পাইকারি'} | {retailPrice ? `৳${retailPrice}${retailPriceMax ? ' - ৳' + retailPriceMax : ''}` : 'খুচরা'}
+                </span>
+              </h3>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-800">
-                  খুচরা বিক্রয়মূল্য (Retail / Khusra Price / ৳) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={retailPrice}
-                  onChange={(e) => setRetailPrice(e.target.value ? Number(e.target.value) : '')}
-                  placeholder="১০০"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Wholesale Range */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 text-xs">
+                    পাইকারি দামের রেঞ্জ (Wholesale Range / ৳) *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      required
+                      value={wholesalePrice}
+                      onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="সর্বনিম্ন (যেমন: ১৯৬৫)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
+                    />
+                    <span className="text-slate-400 font-bold">-</span>
+                    <input
+                      type="number"
+                      value={wholesalePriceMax}
+                      onChange={(e) => setWholesalePriceMax(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="সর্বোচ্চ (যেমন: ৳৮০)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Retail Range */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 text-xs">
+                    খুচরা বিক্রয়মূল্য রেঞ্জ (Retail Range / ৳) *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      required
+                      value={retailPrice}
+                      onChange={(e) => setRetailPrice(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="সর্বনিম্ন (যেমন: ৳১০০)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
+                    />
+                    <span className="text-slate-400 font-bold">-</span>
+                    <input
+                      type="number"
+                      value={retailPriceMax}
+                      onChange={(e) => setRetailPriceMax(e.target.value ? Number(e.target.value) : '')}
+                      placeholder="সর্বোচ্চ (যেমন: ৳১২০)"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
