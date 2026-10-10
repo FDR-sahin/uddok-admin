@@ -16,7 +16,7 @@ export default async function handler(req: any, res: any) {
       let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
         const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
@@ -78,9 +78,10 @@ export default async function handler(req: any, res: any) {
       let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
-        const result = await client.db('uddokta_db').collection('ideas').insertOne(newIdea);
+        const db = client.db('uddokta_db');
+        const result = await db.collection('ideas').insertOne(newIdea);
         await client.close().catch(() => {});
         return res.status(201).json({ success: true, data: { ...newIdea, _id: String(result.insertedId) } });
       } catch (err: any) {

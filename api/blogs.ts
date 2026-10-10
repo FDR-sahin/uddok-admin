@@ -16,7 +16,7 @@ export default async function handler(req: any, res: any) {
       let client: any = null;
       try {
         const { MongoClient } = await import('mongodb');
-        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+        client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
         const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
@@ -67,7 +67,7 @@ export default async function handler(req: any, res: any) {
         let client: any = null;
         try {
           const { MongoClient } = await import('mongodb');
-          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 2000, serverSelectionTimeoutMS: 2000 });
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
           await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('blogs').insertOne(newBlog);
