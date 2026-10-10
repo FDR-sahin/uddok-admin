@@ -25,30 +25,49 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  const rawId = req.query?.id || req.body?.id || req.body?._id;
+
   if (req.method === 'GET') {
+    let mongoBlogs: any[] = [];
+    let deletedIds: string[] = [];
+
     if (MONGODB_URI) {
       let client: any = null;
       try {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
+
+        const delDocs = await db.collection('deleted_blogs').find({}).toArray();
+        deletedIds = delDocs.map((d: any) => String(d.id));
+
         const blogs = await db.collection('blogs').find({}).sort({ _id: -1 }).toArray();
         await client.close().catch(() => {});
 
         if (blogs && Array.isArray(blogs) && blogs.length > 0) {
-          const clean = JSON.parse(JSON.stringify(blogs)).map((b: any) => ({
+          mongoBlogs = JSON.parse(JSON.stringify(blogs)).map((b: any) => ({
             ...b,
             _id: String(b._id || b.id || ''),
             id: String(b.id || b._id || '')
           }));
-          return res.status(200).json({ success: true, count: clean.length, data: clean });
         }
       } catch (err: any) {
         if (client) await client.close().catch(() => {});
         console.error('MongoDB Atlas blogs fetch error:', err.message);
       }
     }
-    return res.status(200).json({ success: true, count: fallbackBlogs.length, data: fallbackBlogs });
+
+    const deletedSet = new Set(deletedIds);
+    const activeMongo = mongoBlogs.filter(
+      (b) => !deletedSet.has(String(b.id)) && !deletedSet.has(String(b._id))
+    );
+    const mongoIds = new Set(activeMongo.map((b) => String(b.id)));
+    const remainingFallback = fallbackBlogs.filter(
+      (f) => !mongoIds.has(String(f.id)) && !deletedSet.has(String(f.id))
+    );
+    const combined = [...activeMongo, ...remainingFallback];
+
+    return res.status(200).json({ success: true, count: combined.length, data: combined });
   }
 
   if (req.method === 'POST') {
@@ -104,8 +123,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'PUT') {
-    const id = req.query.id || req.body._id || req.body.id;
-    if (!id) return res.status(400).json({ success: false, message: 'ID required' });
+    if (!rawId) return res.status(400).json({ success: false, message: 'ID required' });
 
     if (MONGODB_URI) {
       let client: any = null;
@@ -113,8 +131,8 @@ export default async function handler(req: any, res: any) {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
-        const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id: id };
-        const { _id, ...updateData } = req.body;
+        const filter = ObjectId.isValid(rawId) ? { _id: new ObjectId(rawId) } : { id: String(rawId) };
+        const { _id, ...updateData } = req.body || {};
         await db.collection('blogs').updateOne(filter, { $set: updateData });
         await client.close().catch(() => {});
         return res.status(200).json({ success: true, message: 'Updated successfully' });
@@ -127,8 +145,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'DELETE') {
-    const id = req.query.id || req.body.id;
-    if (!id) return res.status(400).json({ success: false, message: 'ID required' });
+    if (!rawId) return res.status(400).json({ success: false, message: 'ID required' });
 
     if (MONGODB_URI) {
       let client: any = null;
@@ -136,8 +153,16 @@ export default async function handler(req: any, res: any) {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
-        const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id: id };
+
+        const filter = ObjectId.isValid(rawId) ? { _id: new ObjectId(rawId) } : { id: String(rawId) };
         await db.collection('blogs').deleteOne(filter);
+
+        await db.collection('deleted_blogs').updateOne(
+          { id: String(rawId) },
+          { $set: { id: String(rawId), deletedAt: new Date().toISOString() } },
+          { upsert: true }
+        );
+
         await client.close().catch(() => {});
         return res.status(200).json({ success: true, message: 'Deleted successfully' });
       } catch (err: any) {

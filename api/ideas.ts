@@ -118,7 +118,7 @@ const fallbackIdeas: any[] = [
     tags: ['#নরসিংদী', '#বাবুরহাট', '#তাঁতেরলুঙ্গি', '#বেডশিট'],
     likes: 134,
     dislikes: 1,
-    supplierTip: 'বৃহস্পতি ও শুক্রবার রাত ৩টা থেকে ভোর পর্যন্ত প্রধান কেনাবেচা হয়।',
+    supplierTip: 'বৃহস্পতি ওশুক্রবার রাত ৩টা থেকে ভোর পর্যন্ত প্রধান কেনাবেচা হয়।',
     contactNumber: '+880 1622-443322',
     postedBy: { name: 'মাকসুদুর রহমান', role: 'ট্রেডার ও কন্ট্রিবিউটর', isVerifiedUser: true },
     comments: []
@@ -158,14 +158,25 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  // Extract ID safely from query, body, or URL
+  const rawId = req.query?.id || req.body?.id || req.body?._id;
+
   if (req.method === 'GET') {
     let mongoIdeas: any[] = [];
+    let deletedIds: string[] = [];
+
     if (MONGODB_URI) {
       let client: any = null;
       try {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
+
+        // 1. Fetch deleted IDs
+        const delDocs = await db.collection('deleted_ideas').find({}).toArray();
+        deletedIds = delDocs.map((d: any) => String(d.id));
+
+        // 2. Fetch active ideas
         const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
         await client.close().catch(() => {});
 
@@ -182,10 +193,20 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // Merge mongoIdeas with fallbackIdeas preventing duplicate IDs
-    const mongoIds = new Set(mongoIdeas.map((i) => String(i.id)));
-    const remainingFallback = fallbackIdeas.filter((f) => !mongoIds.has(String(f.id)));
-    const combined = [...mongoIdeas, ...remainingFallback];
+    const deletedSet = new Set(deletedIds);
+
+    // Filter out deleted items from mongoIdeas
+    const activeMongo = mongoIdeas.filter(
+      (i) => !deletedSet.has(String(i.id)) && !deletedSet.has(String(i._id))
+    );
+
+    // Filter out deleted items from fallbackIdeas
+    const mongoIds = new Set(activeMongo.map((i) => String(i.id)));
+    const remainingFallback = fallbackIdeas.filter(
+      (f) => !mongoIds.has(String(f.id)) && !deletedSet.has(String(f.id))
+    );
+
+    const combined = [...activeMongo, ...remainingFallback];
 
     return res.status(200).json({ success: true, count: combined.length, data: combined });
   }
@@ -224,8 +245,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'PUT') {
-    const id = req.query.id || req.body._id || req.body.id;
-    if (!id) return res.status(400).json({ success: false, message: 'ID required' });
+    if (!rawId) return res.status(400).json({ success: false, message: 'ID required' });
 
     if (MONGODB_URI) {
       let client: any = null;
@@ -233,8 +253,8 @@ export default async function handler(req: any, res: any) {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
-        const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id: id };
-        const { _id, ...updateData } = req.body;
+        const filter = ObjectId.isValid(rawId) ? { _id: new ObjectId(rawId) } : { id: String(rawId) };
+        const { _id, ...updateData } = req.body || {};
         await db.collection('ideas').updateOne(filter, { $set: updateData });
         await client.close().catch(() => {});
         return res.status(200).json({ success: true, message: 'Updated successfully' });
@@ -247,8 +267,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (req.method === 'DELETE') {
-    const id = req.query.id || req.body.id;
-    if (!id) return res.status(400).json({ success: false, message: 'ID required' });
+    if (!rawId) return res.status(400).json({ success: false, message: 'ID required' });
 
     if (MONGODB_URI) {
       let client: any = null;
@@ -256,8 +275,18 @@ export default async function handler(req: any, res: any) {
         client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
         await client.connect();
         const db = client.db('uddokta_db');
-        const filter = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id: id };
+
+        // Delete from 'ideas' collection if present
+        const filter = ObjectId.isValid(rawId) ? { _id: new ObjectId(rawId) } : { id: String(rawId) };
         await db.collection('ideas').deleteOne(filter);
+
+        // Record in 'deleted_ideas' collection so it stays deleted even if preset/fallback
+        await db.collection('deleted_ideas').updateOne(
+          { id: String(rawId) },
+          { $set: { id: String(rawId), deletedAt: new Date().toISOString() } },
+          { upsert: true }
+        );
+
         await client.close().catch(() => {});
         return res.status(200).json({ success: true, message: 'Deleted successfully' });
       } catch (err: any) {

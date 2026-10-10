@@ -224,7 +224,7 @@ export default function App() {
     const id = editingIdea._id || editingIdea.id;
 
     try {
-      await fetch(`/api/ideas/${id}`, {
+      await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingIdea)
@@ -233,7 +233,7 @@ export default function App() {
       console.error(err);
     }
 
-    setIdeas((prev) => prev.map((item: any) => ((item._id === id || item.id === id) ? editingIdea : item)));
+    setIdeas((prev) => prev.map((item: any) => ((String(item._id) === String(id) || String(item.id) === String(id)) ? editingIdea : item)));
     setEditingIdea(null);
     showToast('কার্ডের তথ্য সফলভাবে আপডেট করা হয়েছে!');
   };
@@ -242,11 +242,15 @@ export default function App() {
   const handleDeleteIdea = async (id: string) => {
     if (!confirm('আপনি কি এই বিজনেস আইডিয়া কার্ডটি মুছে ফেলতে চান?')) return;
     try {
-      await fetch(`/api/ideas/${id}`, { method: 'DELETE' });
+      await fetch(`/api/ideas?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
     } catch (err) {
       console.error(err);
     }
-    setIdeas((prev) => prev.filter((i: any) => (i._id !== id && i.id !== id)));
+    setIdeas((prev) => prev.filter((i: any) => (String(i._id) !== String(id) && String(i.id) !== String(id))));
     showToast('আইডিয়া কার্ডটি মুছে ফেলা হয়েছে।');
   };
 
@@ -311,7 +315,7 @@ export default function App() {
     const id = editingBlog._id || editingBlog.id;
 
     try {
-      await fetch(`/api/blogs/${id}`, {
+      await fetch(`/api/blogs?id=${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingBlog)
@@ -320,7 +324,7 @@ export default function App() {
       console.error(err);
     }
 
-    setBlogs((prev) => prev.map((b: any) => ((b._id === id || b.id === id) ? editingBlog : b)));
+    setBlogs((prev) => prev.map((b: any) => ((String(b._id) === String(id) || String(b.id) === String(id)) ? editingBlog : b)));
     setEditingBlog(null);
     showToast('ব্লগের তথ্য সফলভাবে আপডেট হয়েছে!');
   };
@@ -329,11 +333,15 @@ export default function App() {
   const handleDeleteBlog = async (id: string) => {
     if (!confirm('আপনি কি এই ব্লগটি মুছে ফেলতে চান?')) return;
     try {
-      await fetch(`/api/blogs/${id}`, { method: 'DELETE' });
+      await fetch(`/api/blogs?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
     } catch (err) {
       console.error(err);
     }
-    setBlogs((prev) => prev.filter((b: any) => (b._id !== id && b.id !== id)));
+    setBlogs((prev) => prev.filter((b: any) => (String(b._id) !== String(id) && String(b.id) !== String(id))));
     showToast('ব্লগটি মুছে ফেলা হয়েছে।');
   };
 
