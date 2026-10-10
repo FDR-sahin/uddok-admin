@@ -22,6 +22,8 @@ const fallbackIdeas: any[] = [
     tags: ['#savarmilk', '#পাইকারি', '#ডেইরি', '#দুধমার্কেট', '#সাভার'],
     likes: 92,
     dislikes: 0,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'ভোর ৫টা থেকে সকাল ৭টার মধ্যে সরাসরি আড়তে উপস্থিত হলে ফ্রেশ দোয়ানো ঘন দুধ যাচাই করে সিলগালা জারে সংগ্রহ করতে পারবেন।',
     contactNumber: '+880 1712-398412',
     postedBy: { name: 'উদ্যোগ বন্ধু টিম (ভেরিফায়েড)', role: 'ফিল্ড রিসার্চার', isVerifiedUser: true },
@@ -46,6 +48,8 @@ const fallbackIdeas: any[] = [
     tags: ['#চকবাজার', '#জুয়েলারি', '#এক্সেসরিজ', '#পুরানঢাকা', '#মেকআপ'],
     likes: 145,
     dislikes: 2,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'দোকানে গিয়ে স্যাম্পল হিসেবে ১ ডজন ডেমো দেখতে চাইবেন।',
     contactNumber: '+880 1819-876543',
     postedBy: { name: 'ফারহান আহমেদ', role: 'কমিউনিটি সুপারভাইজার', isVerifiedUser: true },
@@ -70,6 +74,8 @@ const fallbackIdeas: any[] = [
     tags: ['#ইসলামপুর', '#কাপড়পাইকারি', '#থানকাপড়', '#সুতিকাপড়'],
     likes: 112,
     dislikes: 1,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'শনিবার ও রবিবার সকালে নতুন লট আসে।',
     contactNumber: '+880 1911-234567',
     postedBy: { name: 'মিজানুর রহমান', role: 'টেক্সটাইল স্পেশালিস্ট', isVerifiedUser: true },
@@ -94,6 +100,8 @@ const fallbackIdeas: any[] = [
     tags: ['#বগুড়াদই', '#শেরপুরমিষ্টি', '#ঐতিহ্যবাহী', '#খাদ্যউদ্যোগ'],
     likes: 78,
     dislikes: 0,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'নাইট কোচে সকালে ফ্রেশ পার্সেল পাওয়া যায়।',
     contactNumber: '+880 1715-998877',
     postedBy: { name: 'আসাদুল্লাহ আল গালিব', role: 'লোকাল জেলা প্রতিনিধি', isVerifiedUser: true },
@@ -118,6 +126,8 @@ const fallbackIdeas: any[] = [
     tags: ['#নরসিংদী', '#বাবুরহাট', '#তাঁতেরলুঙ্গি', '#বেডশিট'],
     likes: 134,
     dislikes: 1,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'বৃহস্পতি ওশুক্রবার রাত ৩টা থেকে ভোর পর্যন্ত প্রধান কেনাবেচা হয়।',
     contactNumber: '+880 1622-443322',
     postedBy: { name: 'মাকসুদুর রহমান', role: 'ট্রেডার ও কন্ট্রিবিউটর', isVerifiedUser: true },
@@ -142,6 +152,8 @@ const fallbackIdeas: any[] = [
     tags: ['#যশোরগুড়', '#পাটালিগুড়', '#অর্গানিকফুড'],
     likes: 58,
     dislikes: 1,
+    likedBy: [],
+    dislikedBy: [],
     supplierTip: 'আসল গুড় জিভে নরম হয়ে সহজে গলে যাবে।',
     contactNumber: '+880 1733-112233',
     postedBy: { name: 'শামীম ওসমান', role: 'কমিউনিটি মেম্বার', isVerifiedUser: true },
@@ -152,15 +164,174 @@ const fallbackIdeas: any[] = [
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id, X-User-Email');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Extract ID safely from query, body, or URL
-  const rawId = req.query?.id || req.body?.id || req.body?._id;
+  const queryAction = req.query?.action;
+  const rawId = req.query?.id || req.query?.ideaId || req.body?.id || req.body?._id;
 
+  // --- REACTION ACTION VIA QUERY PARAMETER (FALLBACK) ---
+  if (queryAction === 'reaction') {
+    if (!rawId) return res.status(400).json({ success: false, message: 'Idea ID is required' });
+    const filter = ObjectId.isValid(String(rawId)) ? { _id: new ObjectId(String(rawId)) } : { id: String(rawId) };
+    const userId =
+      req.body?.userId ||
+      req.query?.userId ||
+      req.headers['x-user-id'] ||
+      req.headers['x-user-email'] ||
+      req.headers['x-forwarded-for'] ||
+      'guest';
+
+    if (req.method === 'GET') {
+      if (MONGODB_URI) {
+        let client: any = null;
+        try {
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
+          await client.connect();
+          const db = client.db('uddokta_db');
+          const idea = await db.collection('ideas').findOne(filter);
+          await client.close().catch(() => {});
+
+          if (idea) {
+            const likedBy = Array.isArray(idea.likedBy) ? idea.likedBy : [];
+            const dislikedBy = Array.isArray(idea.dislikedBy) ? idea.dislikedBy : [];
+            const hasLiked = likedBy.includes(userId);
+            const hasDisliked = dislikedBy.includes(userId);
+            return res.status(200).json({
+              success: true,
+              likesCount: idea.likes || 0,
+              dislikesCount: idea.dislikes || 0,
+              userReaction: hasLiked ? 'like' : hasDisliked ? 'dislike' : null
+            });
+          }
+        } catch (err: any) {
+          if (client) await client.close().catch(() => {});
+        }
+      }
+      return res.status(200).json({ success: true, likesCount: 0, dislikesCount: 0, userReaction: null });
+    }
+
+    if (req.method === 'POST') {
+      const target = req.body?.action || req.body?.target || 'like';
+      if (MONGODB_URI) {
+        let client: any = null;
+        try {
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
+          await client.connect();
+          const db = client.db('uddokta_db');
+          const idea = await db.collection('ideas').findOne(filter);
+          if (idea) {
+            let likedBy: string[] = Array.isArray(idea.likedBy) ? [...idea.likedBy] : [];
+            let dislikedBy: string[] = Array.isArray(idea.dislikedBy) ? [...idea.dislikedBy] : [];
+            let likes = typeof idea.likes === 'number' ? idea.likes : 0;
+            let dislikes = typeof idea.dislikes === 'number' ? idea.dislikes : 0;
+
+            const hasLiked = likedBy.includes(userId);
+            const hasDisliked = dislikedBy.includes(userId);
+            let userReaction: 'like' | 'dislike' | null = null;
+
+            if (target === 'like') {
+              if (hasLiked) {
+                likedBy = likedBy.filter((u) => u !== userId);
+                likes = Math.max(0, likes - 1);
+                userReaction = null;
+              } else {
+                likedBy.push(userId);
+                likes += 1;
+                if (hasDisliked) {
+                  dislikedBy = dislikedBy.filter((u) => u !== userId);
+                  dislikes = Math.max(0, dislikes - 1);
+                }
+                userReaction = 'like';
+              }
+            } else if (target === 'dislike') {
+              if (hasDisliked) {
+                dislikedBy = dislikedBy.filter((u) => u !== userId);
+                dislikes = Math.max(0, dislikes - 1);
+                userReaction = null;
+              } else {
+                dislikedBy.push(userId);
+                dislikes += 1;
+                if (hasLiked) {
+                  likedBy = likedBy.filter((u) => u !== userId);
+                  likes = Math.max(0, likes - 1);
+                }
+                userReaction = 'dislike';
+              }
+            }
+
+            await db.collection('ideas').updateOne(filter, {
+              $set: { likes, dislikes, likedBy, dislikedBy }
+            });
+            await client.close().catch(() => {});
+            return res.status(200).json({ success: true, likesCount: likes, dislikesCount: dislikes, userReaction });
+          }
+          await client.close().catch(() => {});
+        } catch (err: any) {
+          if (client) await client.close().catch(() => {});
+        }
+      }
+      return res.status(200).json({ success: true, likesCount: 1, dislikesCount: 0, userReaction: 'like' });
+    }
+  }
+
+  // --- COMMENTS ACTION VIA QUERY PARAMETER (FALLBACK) ---
+  if (queryAction === 'comments' || queryAction === 'comment') {
+    if (!rawId) return res.status(400).json({ success: false, message: 'Idea ID is required' });
+    const filter = ObjectId.isValid(String(rawId)) ? { _id: new ObjectId(String(rawId)) } : { id: String(rawId) };
+
+    if (req.method === 'GET') {
+      if (MONGODB_URI) {
+        let client: any = null;
+        try {
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
+          await client.connect();
+          const db = client.db('uddokta_db');
+          const idea = await db.collection('ideas').findOne(filter);
+          await client.close().catch(() => {});
+          if (idea) {
+            return res.status(200).json({ success: true, count: idea.comments?.length || 0, data: idea.comments || [] });
+          }
+        } catch (err: any) {
+          if (client) await client.close().catch(() => {});
+        }
+      }
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    if (req.method === 'POST') {
+      const commentText = req.body?.comment || req.body?.content || '';
+      if (!commentText.trim()) return res.status(400).json({ success: false, message: 'Comment content is required' });
+      const newComment = {
+        id: `c-${Date.now()}`,
+        authorName: req.body?.authorName || 'উদ্যোক্তা',
+        authorRole: req.body?.authorRole || 'ভিজিটর',
+        comment: commentText.trim(),
+        createdAt: new Date().toLocaleDateString('bn-BD'),
+        likes: 0
+      };
+
+      if (MONGODB_URI) {
+        let client: any = null;
+        try {
+          client = new MongoClient(MONGODB_URI, { connectTimeoutMS: 5000, serverSelectionTimeoutMS: 5000 });
+          await client.connect();
+          const db = client.db('uddokta_db');
+          await db.collection('ideas').updateOne(filter, { $push: { comments: newComment } as any });
+          await client.close().catch(() => {});
+          return res.status(201).json({ success: true, data: newComment });
+        } catch (err: any) {
+          if (client) await client.close().catch(() => {});
+        }
+      }
+      return res.status(201).json({ success: true, data: newComment });
+    }
+  }
+
+  // --- STANDARD GET IDEAS LIST OR BY ID ---
   if (req.method === 'GET') {
     let mongoIdeas: any[] = [];
     let deletedIds: string[] = [];
@@ -177,14 +348,24 @@ export default async function handler(req: any, res: any) {
         deletedIds = delDocs.map((d: any) => String(d.id));
 
         // 2. Fetch active ideas
-        const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
+        const queryFilter: any = {};
+        if (req.query?.status && req.query?.status !== 'all') {
+          queryFilter.status = req.query.status;
+        }
+
+        const ideas = await db.collection('ideas').find(queryFilter).sort({ _id: -1 }).toArray();
         await client.close().catch(() => {});
 
         if (ideas && Array.isArray(ideas) && ideas.length > 0) {
           mongoIdeas = JSON.parse(JSON.stringify(ideas)).map((item: any) => ({
             ...item,
             _id: String(item._id || item.id || ''),
-            id: String(item.id || item._id || '')
+            id: String(item.id || item._id || ''),
+            likes: typeof item.likes === 'number' ? item.likes : 0,
+            dislikes: typeof item.dislikes === 'number' ? item.dislikes : 0,
+            likedBy: Array.isArray(item.likedBy) ? item.likedBy : [],
+            dislikedBy: Array.isArray(item.dislikedBy) ? item.dislikedBy : [],
+            comments: Array.isArray(item.comments) ? item.comments : []
           }));
         }
       } catch (err: any) {
@@ -206,15 +387,43 @@ export default async function handler(req: any, res: any) {
       (f) => !mongoIds.has(String(f.id)) && !deletedSet.has(String(f.id))
     );
 
-    const combined = [...activeMongo, ...remainingFallback];
+    let combined = [...activeMongo, ...remainingFallback];
+
+    // Filter by single id if requested
+    if (rawId) {
+      combined = combined.filter((i) => String(i.id) === String(rawId) || String(i._id) === String(rawId));
+    }
+
+    // Filter by status if requested
+    const status = req.query?.status;
+    if (status && status !== 'all') {
+      combined = combined.filter((i) => (i.status || 'approved') === status);
+    }
+
+    // Filter by user if requested
+    const userId = req.query?.userId;
+    const authorEmail = req.query?.authorEmail;
+    if (userId || authorEmail) {
+      combined = combined.filter((i) => {
+        const matchesUser = userId && (i.userId === userId || i.author?.id === userId);
+        const matchesEmail = authorEmail && (i.authorEmail === authorEmail || i.postedBy?.email === authorEmail);
+        return matchesUser || matchesEmail;
+      });
+    }
 
     return res.status(200).json({ success: true, count: combined.length, data: combined });
   }
 
+  // --- STANDARD POST NEW IDEA ---
   if (req.method === 'POST') {
     try {
       const newIdea = {
         ...req.body,
+        likes: typeof req.body?.likes === 'number' ? req.body.likes : 0,
+        dislikes: typeof req.body?.dislikes === 'number' ? req.body.dislikes : 0,
+        likedBy: Array.isArray(req.body?.likedBy) ? req.body.likedBy : [],
+        dislikedBy: Array.isArray(req.body?.dislikedBy) ? req.body.dislikedBy : [],
+        comments: Array.isArray(req.body?.comments) ? req.body.comments : [],
         createdAt: new Date().toISOString()
       };
 
@@ -276,11 +485,9 @@ export default async function handler(req: any, res: any) {
         await client.connect();
         const db = client.db('uddokta_db');
 
-        // Delete from 'ideas' collection if present
         const filter = ObjectId.isValid(rawId) ? { _id: new ObjectId(rawId) } : { id: String(rawId) };
         await db.collection('ideas').deleteOne(filter);
 
-        // Record in 'deleted_ideas' collection so it stays deleted even if preset/fallback
         await db.collection('deleted_ideas').updateOne(
           { id: String(rawId) },
           { $set: { id: String(rawId), deletedAt: new Date().toISOString() } },

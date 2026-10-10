@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/api/ideas/:id/comments", "destination": "/api/ideas/[id]/comments?id=:id" },
+    { "source": "/api/ideas/:id/reaction", "destination": "/api/ideas/[id]/reaction?id=:id" },
     { "source": "/((?!api/.*).*)", "destination": "/index.html" }
   ]
 }
