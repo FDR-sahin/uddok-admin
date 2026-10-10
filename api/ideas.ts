@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { initialSourcingIdeas } from '../src/data/sourcingData';
+import { initialSourcingIdeas } from './data/ideasData';
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
@@ -12,33 +12,17 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  // Suppress unhandled background driver rejections in serverless functions
-  if (typeof process !== 'undefined' && !(process as any)._mongoListenersAdded) {
-    (process as any)._mongoListenersAdded = true;
-    process.on('unhandledRejection', (reason: any) => {
-      console.log('Suppressed background rejection:', reason?.message || reason);
-    });
-    process.on('uncaughtException', (err: any) => {
-      console.log('Suppressed background exception:', err?.message || err);
-    });
-  }
-
   try {
     if (req.method === 'GET') {
       if (MONGODB_URI) {
         let client: MongoClient | null = null;
         try {
           client = new MongoClient(MONGODB_URI, {
-            connectTimeoutMS: 2500,
-            serverSelectionTimeoutMS: 2500,
-            socketTimeoutMS: 2500
+            connectTimeoutMS: 2000,
+            serverSelectionTimeoutMS: 2000
           });
-          
-          await Promise.race([
-            client.connect(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Connect Timeout')), 2500))
-          ]);
 
+          await client.connect();
           const db = client.db('uddokta_db');
           const ideas = await db.collection('ideas').find({}).sort({ _id: -1 }).toArray();
           await client.close().catch(() => {});
@@ -97,16 +81,11 @@ export default async function handler(req: any, res: any) {
         let client: MongoClient | null = null;
         try {
           client = new MongoClient(MONGODB_URI, {
-            connectTimeoutMS: 2500,
-            serverSelectionTimeoutMS: 2500,
-            socketTimeoutMS: 2500
+            connectTimeoutMS: 2000,
+            serverSelectionTimeoutMS: 2000
           });
 
-          await Promise.race([
-            client.connect(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Connect Timeout')), 2500))
-          ]);
-
+          await client.connect();
           const db = client.db('uddokta_db');
           const result = await db.collection('ideas').insertOne(newIdea);
           await client.close().catch(() => {});
