@@ -55,10 +55,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [sDistrict, setSDistrict] = useState('ঢাকা');
   const [sArea, setSArea] = useState('');
   const [sExactLocation, setSExactLocation] = useState('');
-  const [sWholesalePrice, setSWholesalePrice] = useState<number | ''>('');
-  const [sWholesalePriceMax, setSWholesalePriceMax] = useState<number | ''>('');
-  const [sRetailPrice, setSRetailPrice] = useState<number | ''>('');
-  const [sRetailPriceMax, setSRetailPriceMax] = useState<number | ''>('');
+  const [sWholesalePrice, setSWholesalePrice] = useState<string>('');
+  const [sWholesalePriceMax, setSWholesalePriceMax] = useState<string>('');
+  const [sRetailPrice, setSRetailPrice] = useState<string>('');
+  const [sRetailPriceMax, setSRetailPriceMax] = useState<string>('');
   const [sUnit, setSUnit] = useState('প্রতি পিস');
   const [sMoq, setSMoq] = useState('১০ পিস');
   const [sLat, setSLat] = useState<number>(23.8103);
@@ -68,36 +68,26 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [sContact, setSContact] = useState('');
   const [sIsVerified, setSIsVerified] = useState(true);
 
-  // Blog form state
-  const [bTitle, setBTitle] = useState('');
-  const [bCategory, setBCategory] = useState('সোর্সিং ও প্ল্যানিং');
-  const [bAuthor, setBAuthor] = useState('মোঃ দেলোয়ার হোসেন (মিথুন)');
-  const [bAuthorTitle, setBAuthorTitle] = useState('Founder & CEO, Regards Tech');
-  const [bReadTime, setBReadTime] = useState('৫ মিনিট');
-  const [bExcerpt, setBExcerpt] = useState('');
-  const [bContent, setBContent] = useState('');
-  const [bTakeaway, setBTakeaway] = useState('');
-  const [bChecklist, setBChecklist] = useState('');
-  const [bTags, setBTags] = useState('উদ্যোক্তা, ব্যবসা, সোর্সিং');
+  const parseRangeValue = (val: string, maxVal?: string) => {
+    let min: number = 0;
+    let max: number | undefined = undefined;
 
-  // Success notifications
-  const [successMsg, setSuccessMsg] = useState('');
-  const [showGuideline, setShowGuideline] = useState(false);
-
-  const insertSyntax = (before: string, after: string = '') => {
-    setBContent((prev) => `${prev}\n${before}${after ? 'টেক্সট' + after : ''}`);
-  };
-
-  if (!isOpen) return null;
-
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode.trim() === 'admin123' || passcode.trim() === 'mithun' || passcode.trim() === '') {
-      setIsAdmin(true);
-      setAuthError('');
+    const s = String(val || '').trim();
+    if (s.includes('-')) {
+      const parts = s.split('-').map((p) => parseFloat(p.replace(/[^\d.]/g, '')));
+      if (!isNaN(parts[0])) min = parts[0];
+      if (parts.length > 1 && !isNaN(parts[1])) max = parts[1];
     } else {
-      setAuthError('ভুল পাসকোড! ডেমো পাসকোড: admin123 (অথবা সরাসরি লগইন চাপুন)');
+      const n = parseFloat(s.replace(/[^\d.]/g, ''));
+      if (!isNaN(n)) min = n;
     }
+
+    if (maxVal && maxVal.trim()) {
+      const mn = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+      if (!isNaN(mn)) max = mn;
+    }
+
+    return { min, max };
   };
 
   const handleSourcingSubmit = (e: React.FormEvent) => {
@@ -106,6 +96,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       alert('দয়া করে শিরোনাম, পাইকারি দাম, খুচরা দাম এবং নির্দিষ্ট লোকেশন পূরণ করুন।');
       return;
     }
+
+    const wRange = parseRangeValue(sWholesalePrice, sWholesalePriceMax);
+    const rRange = parseRangeValue(sRetailPrice, sRetailPriceMax);
 
     onAddSourcingIdea({
       title: sTitle,
@@ -117,10 +110,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         lat: Number(sLat) || 23.8103,
         lng: Number(sLng) || 90.4125
       },
-      wholesalePrice: Number(sWholesalePrice),
-      wholesalePriceMax: sWholesalePriceMax ? Number(sWholesalePriceMax) : undefined,
-      retailPrice: Number(sRetailPrice),
-      retailPriceMax: sRetailPriceMax ? Number(sRetailPriceMax) : undefined,
+      wholesalePrice: wRange.min,
+      wholesalePriceMax: wRange.max,
+      retailPrice: rRange.min,
+      retailPriceMax: rRange.max,
       unit: sUnit,
       moq: sMoq,
       isVerified: sIsVerified,
@@ -383,18 +376,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         <input
-                          type="number"
+                          type="text"
                           required
                           value={sWholesalePrice}
-                          onChange={(e) => setSWholesalePrice(e.target.value ? Number(e.target.value) : '')}
-                          placeholder="সর্বনিম্ন (যেমন: 65)"
+                          onChange={(e) => setSWholesalePrice(e.target.value)}
+                          placeholder="দাম বা রেঞ্জ (যেমন: 100-3000)"
                           className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
                         />
                         <input
-                          type="number"
+                          type="text"
                           value={sWholesalePriceMax}
-                          onChange={(e) => setSWholesalePriceMax(e.target.value ? Number(e.target.value) : '')}
-                          placeholder="সর্বোচ্চ (যেমন: 80)"
+                          onChange={(e) => setSWholesalePriceMax(e.target.value)}
+                          placeholder="সর্বোচ্চ (যেমন: 3000)"
                           className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
                         />
                       </div>
@@ -407,18 +400,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         <input
-                          type="number"
+                          type="text"
                           required
                           value={sRetailPrice}
-                          onChange={(e) => setSRetailPrice(e.target.value ? Number(e.target.value) : '')}
-                          placeholder="সর্বনিম্ন (যেমন: 100)"
+                          onChange={(e) => setSRetailPrice(e.target.value)}
+                          placeholder="দাম বা রেঞ্জ (যেমন: 150-3500)"
                           className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
                         />
                         <input
-                          type="number"
+                          type="text"
                           value={sRetailPriceMax}
-                          onChange={(e) => setSRetailPriceMax(e.target.value ? Number(e.target.value) : '')}
-                          placeholder="সর্বোচ্চ (যেমন: 120)"
+                          onChange={(e) => setSRetailPriceMax(e.target.value)}
+                          placeholder="সর্বোচ্চ (যেমন: 3500)"
                           className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
                         />
                       </div>

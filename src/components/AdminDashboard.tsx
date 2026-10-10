@@ -53,10 +53,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [category, setCategory] = useState('পোশাক');
   const [district, setDistrict] = useState('ঢাকা');
   const [exactLocation, setExactLocation] = useState('');
-  const [wholesalePrice, setWholesalePrice] = useState<number | ''>('');
-  const [wholesalePriceMax, setWholesalePriceMax] = useState<number | ''>('');
-  const [retailPrice, setRetailPrice] = useState<number | ''>('');
-  const [retailPriceMax, setRetailPriceMax] = useState<number | ''>('');
+  const [wholesalePrice, setWholesalePrice] = useState<string>('');
+  const [wholesalePriceMax, setWholesalePriceMax] = useState<string>('');
+  const [retailPrice, setRetailPrice] = useState<string>('');
+  const [retailPriceMax, setRetailPriceMax] = useState<string>('');
   const [description, setDescription] = useState('');
   const [ideaSubmitting, setIdeaSubmitting] = useState(false);
 
@@ -66,6 +66,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [blogExcerpt, setBlogExcerpt] = useState('');
   const [notification, setNotification] = useState('');
   const [showGuideline, setShowGuideline] = useState(false);
+
+  const parseRangeValue = (val: string, maxVal?: string) => {
+    let min: number = 0;
+    let max: number | undefined = undefined;
+
+    const s = String(val || '').trim();
+    if (s.includes('-')) {
+      const parts = s.split('-').map((p) => parseFloat(p.replace(/[^\d.]/g, '')));
+      if (!isNaN(parts[0])) min = parts[0];
+      if (parts.length > 1 && !isNaN(parts[1])) max = parts[1];
+    } else {
+      const n = parseFloat(s.replace(/[^\d.]/g, ''));
+      if (!isNaN(n)) min = n;
+    }
+
+    if (maxVal && maxVal.trim()) {
+      const mn = parseFloat(String(maxVal).replace(/[^\d.]/g, ''));
+      if (!isNaN(mn)) max = mn;
+    }
+
+    return { min, max };
+  };
 
   const insertSyntax = (before: string, after: string = '') => {
     setBlogContent((prev) => `${prev}\n${before}${after ? 'টেক্সট' + after : ''}`);
@@ -89,16 +111,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    const wRange = parseRangeValue(wholesalePrice, wholesalePriceMax);
+    const rRange = parseRangeValue(retailPrice, retailPriceMax);
+
     setIdeaSubmitting(true);
     await onAddIdea({
       title,
       category,
       district,
       exactLocation,
-      wholesalePrice: Number(wholesalePrice),
-      wholesalePriceMax: wholesalePriceMax ? Number(wholesalePriceMax) : undefined,
-      retailPrice: Number(retailPrice),
-      retailPriceMax: retailPriceMax ? Number(retailPriceMax) : undefined,
+      wholesalePrice: wRange.min,
+      wholesalePriceMax: wRange.max,
+      retailPrice: rRange.min,
+      retailPriceMax: rRange.max,
       description: description || `${district} এলাকার পাইকারি সোর্সিং ও খুচরা বিক্রয় সুযোগ।`,
       unit: 'প্রতি পিস',
       moq: '১০ পিস',
@@ -378,19 +403,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
+                      type="text"
                       required
                       value={wholesalePrice}
-                      onChange={(e) => setWholesalePrice(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="সর্বনিম্ন (যেমন: ১৯৬৫)"
+                      onChange={(e) => setWholesalePrice(e.target.value)}
+                      placeholder="দাম বা রেঞ্জ (যেমন: 100-3000 বা 100)"
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
                     />
                     <span className="text-slate-400 font-bold">-</span>
                     <input
-                      type="number"
+                      type="text"
                       value={wholesalePriceMax}
-                      onChange={(e) => setWholesalePriceMax(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="সর্বোচ্চ (যেমন: ৳৮০)"
+                      onChange={(e) => setWholesalePriceMax(e.target.value)}
+                      placeholder="সর্বোচ্চ (যেমন: 3000)"
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
                     />
                   </div>
@@ -403,19 +428,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
+                      type="text"
                       required
                       value={retailPrice}
-                      onChange={(e) => setRetailPrice(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="সর্বনিম্ন (যেমন: ৳১০০)"
+                      onChange={(e) => setRetailPrice(e.target.value)}
+                      placeholder="দাম বা রেঞ্জ (যেমন: 150-3500 বা 150)"
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
                     />
                     <span className="text-slate-400 font-bold">-</span>
                     <input
-                      type="number"
+                      type="text"
                       value={retailPriceMax}
-                      onChange={(e) => setRetailPriceMax(e.target.value ? Number(e.target.value) : '')}
-                      placeholder="সর্বোচ্চ (যেমন: ৳১২০)"
+                      onChange={(e) => setRetailPriceMax(e.target.value)}
+                      placeholder="সর্বোচ্চ (যেমন: 3500)"
                       className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-emerald-500 outline-none"
                     />
                   </div>
