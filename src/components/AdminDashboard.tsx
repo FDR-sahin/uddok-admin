@@ -366,7 +366,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <h3 className="font-bold text-slate-800 text-xs sm:text-sm flex items-center justify-between">
                 <span>পণ্য মূল্যরেঞ্জ (Price Range Setting)</span>
                 <span className="text-[11px] font-mono text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  {wholesalePrice ? `৳${wholesalePrice}${wholesalePriceMax ? ' - ৳' + wholesalePriceMax : ''}` : 'পাইকারি'} | {retailPrice ? `৳${retailPrice}${retailPriceMax ? ' - ৳' + retailPriceMax : ''}` : 'খুচরা'}
+                  {wholesalePrice ? `৳${wholesalePrice}${wholesalePriceMax ? ' - ' + wholesalePriceMax : ''}` : 'পাইকারি'} | {retailPrice ? `৳${retailPrice}${retailPriceMax ? ' - ' + retailPriceMax : ''}` : 'খুচরা'}
                 </span>
               </h3>
 
