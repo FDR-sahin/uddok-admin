@@ -3,8 +3,11 @@ import path from 'path';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import dns from 'dns';
-import { initialBlogPosts } from './src/data/blogsData';
-import { initialSourcingIdeas } from './src/data/sourcingData';
+// import { initialBlogPosts } from './src/data/blogsData';
+// import { initialSourcingIdeas } from './src/data/sourcingData';
+import { initialBlogPosts } from './src/data/blogsData.ts';
+import { initialSourcingIdeas } from './src/data/sourcingData.ts';
+
 
 // Fix for Windows / Bangladesh ISP DNS SRV resolution querySrv ECONNREFUSED
 try {
