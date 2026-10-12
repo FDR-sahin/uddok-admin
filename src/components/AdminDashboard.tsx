@@ -100,7 +100,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const success = await onLogin(email, password);
     setLoggingIn(false);
     if (!success) {
-      setLoginError('ভুল ইমেইল বা পাসওয়ার্ড! (ডিফল্ট: admin@uddokta.com / password123)');
+      setLoginError('ভুল ইমেইল বা পাসওয়ার্ড!');
     }
   };
 

@@ -38,6 +38,9 @@ export interface SourcingIdea {
   status?: 'pending' | 'approved' | 'rejected';
   authorEmail?: string;
   authorPhone?: string;
+  supplierTip?: string;
+  contactNumber?: string;
+  _id?: string;
   postedBy: {
     name: string;
     role: string;

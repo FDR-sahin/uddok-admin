@@ -10,7 +10,7 @@
 PORT=3000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/uddokta_db?retryWrites=true&w=majority
 ADMIN_EMAIL=regardstech.team@gmail.com
-ADMIN_PASSWORD=redardstech123
+ADMIN_PASSWORD=<set-a-strong-unique-password>
 ```
 
 ---
@@ -38,7 +38,7 @@ ADMIN_PASSWORD=redardstech123
 ```json
 {
   "email": "admin@uddokta.com",
-  "password": "password123"
+  "password": "<your ADMIN_PASSWORD>"
 }
 ```
 **Response:**
